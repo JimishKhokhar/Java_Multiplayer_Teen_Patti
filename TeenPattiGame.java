@@ -1,0 +1,2515 @@
+import javax.swing.*;
+import java.net.*;
+import java.io.*;
+import java.awt.Font;
+import java.util.*;
+
+import java.awt.Color;
+import java.awt.event.*;
+
+public class TeenPattiGame {
+    String nameValString;
+
+    JFrame MainFrame;
+    JLabel Name;
+    JLabel instructions;
+    JTextArea NameValue;
+    JButton b1;
+    JButton b2;
+    JFrame HostFrame;
+    JLabel TH1;
+    JLabel TH2;
+    JButton Hplay;
+    JFrame JoinFrame;
+    JLabel TJ1;
+    JButton Jplay;
+    JLabel TJ2;
+    JLabel TJ3;
+    JLabel TJ4;
+    JTextField IPAdd;
+
+    String HostName;
+    String PlayerName;
+
+    ServerSocket ss;
+    Socket s;
+    DataOutputStream dout;
+    DataInputStream din;
+    ArrayList<String> isSelected;
+    String ALLCARDS[] = new String[6];
+
+    String card[] = { "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "0H", "JH", "QH", "KH", "AH", "2S", "3S", "4S",
+            "5S", "6S", "7S", "8S", "9S", "0S", "JS", "QS", "KS", "AS", "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C",
+            "0C", "JC", "QC", "KC", "AC", "2D", "3D", "4D", "5D", "6D", "7D", "8D", "9D", "0D", "JD", "QD", "KD",
+            "AD" };
+
+    public static void main(String[] args) {
+        new TeenPattiGame();
+    }
+
+    String[] GetCards() {
+        Random rand = new Random();
+        String[] AllCards = new String[6];
+        isSelected = new ArrayList<String>();
+        int n = 6;
+        int i = 0;
+        while (n != 0) {
+            int randomNumber = rand.nextInt(52);
+            if (isSelected.contains(card[randomNumber])) {
+                continue;
+            }
+            AllCards[i] = card[randomNumber];
+            isSelected.add(card[randomNumber]);
+            System.out.println(card[randomNumber]);
+            i++;
+            n--;
+        }
+        return AllCards;
+    }
+
+    TeenPattiGame() {
+        // shuffle(card);
+        // String[] MyCardsHost={card[0],card[2],card[4]};
+        // String[] MyCardsPlayer={card[1],card[3],card[5]};
+
+        this.ALLCARDS = GetCards();
+
+        MainFrame = new JFrame("Card Game");
+        MainFrame.getContentPane().setBackground(Color.CYAN);
+        MainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        Name = new JLabel("Enter Your Name:");
+        Name.setBounds(50, 100, 100, 30);
+        MainFrame.add(Name);
+
+        instructions = new JLabel("Please HOST The Game First Then Join The Game");
+        instructions.setBounds(50, 300, 300, 30);
+        MainFrame.add(instructions);
+
+        NameValue = new JTextArea();
+        NameValue.setBounds(160, 107, 150, 18);
+        MainFrame.add(NameValue);
+
+        b1 = new JButton("Host");
+        b1.setBounds(50, 250, 95, 30);
+        MainFrame.add(b1);
+
+        b2 = new JButton("Join");
+        b2.setBounds(250, 250, 95, 30);
+        MainFrame.add(b2);
+        TJ4 = new JLabel("Enter The IP Address Of HOST:");
+        TJ4.setBounds(50, 150, 180, 30);
+        MainFrame.add(TJ4);
+        IPAdd = new JTextField();
+        IPAdd.setFont(new Font("Serif", Font.PLAIN, 20));
+        IPAdd.setBounds(230, 150, 150, 25);
+        MainFrame.add(IPAdd);
+        JLabel ins = new JLabel("Insert Host IP Address only if You are JOINING THE GAME!");
+        ins.setBounds(50, 200, 350, 30);
+        MainFrame.add(ins);
+
+        HostFrame = new JFrame("Card Game");
+        HostFrame.setSize(800, 800);
+        HostFrame.getContentPane().setBackground(Color.CYAN);
+        HostFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        TH1 = new JLabel("Host Frame!");
+        TH1.setFont(new Font("Serif", Font.BOLD, 20));
+        TH1.setBounds(370, 10, 300, 15);
+        HostFrame.add(TH1);
+        TH2 = new JLabel("WAITING FOR PLAYER TO JOIN!...");
+        TH2.setFont(new Font("Monospace", Font.PLAIN, 35));
+        TH2.setBounds(100, 60, 700, 40);
+        HostFrame.add(TH2);
+        Hplay = new JButton("Play");
+        Hplay.setBounds(320, 600, 100, 30);
+        HostFrame.add(Hplay);
+
+        JoinFrame = new JFrame("Card Game");
+        JoinFrame.setSize(800, 800);
+        JoinFrame.getContentPane().setBackground(Color.CYAN);
+        JoinFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        TJ1 = new JLabel("Join Frame");
+        TJ1.setFont(new Font("Serif", Font.BOLD, 20));
+        TJ1.setBounds(370, 10, 300, 30);
+        JoinFrame.add(TJ1);
+        TJ2 = new JLabel("");
+        TJ2.setFont(new Font("Monospace", Font.PLAIN, 35));
+        TJ2.setBounds(100, 60, 700, 30);
+        JoinFrame.add(TJ2);
+
+        // populate your frames with stuff
+        b1.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                nameValString = NameValue.getText().toString();
+                if (nameValString.length() == 0) {
+                    JOptionPane.showMessageDialog(MainFrame, "Please Enter The Name!");
+                    return;
+                }
+                MainFrame.setVisible(false);
+                HostFrame.setLayout(null);
+                HostFrame.setVisible(true);
+                if (MakeHost()) {
+
+                    TH2.setText("Player Joined !!");
+                    HostFrame.setTitle("Card Game");
+                } else
+                    return;
+
+            }
+        });
+
+        b2.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String nameValString = NameValue.getText().toString();
+
+                if (nameValString.length() == 0) {
+                    JOptionPane.showMessageDialog(MainFrame, "Please Enter The Name!");
+                    return;
+                }
+                if (IPAdd.getText().toString().length() == 0) {
+                    JOptionPane.showMessageDialog(MainFrame,
+                            "Please Enter The IP Address Of HOST's COMPUTER..... \n ASK THE HOST-PLAYER!!");
+                    return;
+                }
+                MainFrame.setVisible(false);
+                JoinFrame.setLayout(null);
+                JoinFrame.setVisible(true);
+                if (MakeJoin()) {
+                    TJ2.setText("FAILED TO CONNECT ! PLEASE TRY TO JOIN AGAIN");
+                    TJ3 = new JLabel();
+                    TJ3.setText("Waiting For Host TO Start The GAME!!!....");
+                    TJ3.setFont(new Font("Monospace", Font.PLAIN, 30));
+                    TJ3.setBounds(100, 120, 600, 50);
+                    JoinFrame.add(TJ3);
+                } else
+                    return;
+
+                JoinFrame.setTitle("WAITING FOR THE HOST TO START THE GAME!!!!!");
+
+                String IsStart = "";
+                try {
+                    IsStart = din.readUTF().toString();
+                } catch (Exception e2) {
+                    // TODO: handle exception
+                }
+                if (IsStart.equals("S")) {
+
+                    JoinFrame.setVisible(false);
+                    new PlayerGame(din, dout, ALLCARDS);
+                }
+
+            }
+        });
+
+        Hplay.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                HostFrame.setVisible(false);
+
+                try {
+                    dout.writeUTF("S");
+                } catch (Exception e1) {
+                    // TODO: handle exception
+                }
+                HostFrame.setVisible(false);
+                new HostGame(din, dout, ALLCARDS);
+            }
+        });
+
+        MainFrame.add(b1);
+        MainFrame.add(b2);
+        MainFrame.setSize(400, 400);
+        MainFrame.setLayout(null);
+        MainFrame.setVisible(true);
+
+    }
+
+    private Boolean MakeHost() {
+        HostFrame.setTitle("PLEASE JOIN THE GAME FROM OTHER PLAYER!!");
+        HostFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        try {
+            ss = new ServerSocket(6666);
+            s = ss.accept();
+            din = new DataInputStream(s.getInputStream());
+            dout = new DataOutputStream(s.getOutputStream());
+            // Host Sends The Name First
+            dout.writeUTF(nameValString);
+
+            HostName = nameValString;
+
+            return true;
+
+        } catch (Exception e) {
+            // TODO: handle exception
+            return false;
+        }
+
+    }
+
+    private boolean MakeJoin() {
+        try {
+            s = new Socket(IPAdd.getText().toString(), 6666);
+            din = new DataInputStream(s.getInputStream());
+            dout = new DataOutputStream(s.getOutputStream());
+
+            // Player Accepts The HostName First
+            HostName = din.readUTF();
+
+            PlayerName = nameValString;
+
+        } catch (Exception e) {
+            // TODO: handle exception
+            return false;
+        }
+
+        return true;
+
+    }
+
+}
+
+class CardGetter {
+    static ArrayList<String> card = new ArrayList<String>(
+            Arrays.asList("2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "0H", "JH", "QH", "KH", "AH", "2S", "3S",
+                    "4S", "5S", "6S", "7S", "8S", "9S", "0S", "JS", "QS", "KS", "AS", "2C", "3C", "4C", "5C", "6C",
+                    "7C", "8C", "9C", "0C", "JC", "QC", "KC", "AC", "2D", "3D", "4D", "5D", "6D", "7D", "8D", "9D",
+                    "0D", "JD", "QD", "KD", "AD"));
+
+    public String[] GetMyCards() {
+        Random rand = new Random();
+        String MyCards[] = new String[3];
+
+        for (int i = 0; i < 3; i++) {
+            int randomNumber = rand.nextInt(card.size());
+            MyCards[i] = card.get(randomNumber);
+            card.remove(randomNumber);
+            System.out.println(card.size());
+        }
+        return MyCards;
+    }
+}
+
+class ImageIconGetter {
+    static Map<String, String> map = new HashMap<String, String>();
+    ArrayList<String> card = new ArrayList<String>(
+            Arrays.asList("2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "0H", "JH", "QH", "KH", "AH", "2S", "3S",
+                    "4S", "5S", "6S", "7S", "8S", "9S", "0S", "JS", "QS", "KS", "AS", "2C", "3C", "4C", "5C", "6C",
+                    "7C", "8C", "9C", "0C", "JC", "QC", "KC", "AC", "2D", "3D", "4D", "5D", "6D", "7D", "8D", "9D",
+                    "0D", "JD", "QD", "KD", "AD"));
+
+    // 4H","5H","6H","7H","8H","9H","0H","JH","QH","KH","AH","2S","3S","4S","5S","6S","7S","8S","9S","0S","JS","QS","KS","AS","2C","3C","4C","5C","6C","7C","8C","9C","0C","JC","QC","KC","AC","2D","3D","4D","5D","6D","7D","8D","9D","0D","JD","QD","KD","AD"
+    ImageIconGetter() {
+        for (int i = 0; i < 52; i++) {
+            map.put(card.get(i), "ALLCards\\" + card.get(i) + ".png");
+        }
+    }
+
+    String GetTheImageIcon(String k) {
+        return map.get(k);
+    }
+}
+
+class HostGame extends javax.swing.JFrame {
+    private javax.swing.JLabel C1;
+    private javax.swing.JLabel C2;
+    private javax.swing.JLabel C3;
+    private javax.swing.JButton DecrementBit;
+    private javax.swing.JButton IncrementBit;
+    private javax.swing.JLabel Kaalein;
+    private javax.swing.JLabel OppPlayerFace;
+    private javax.swing.JLabel PoolBalance;
+    private javax.swing.JLabel TurnIndicator;
+    private javax.swing.JLabel YourBalance;
+    private javax.swing.JButton btnbet;
+    private javax.swing.JButton btnpack;
+    private javax.swing.JButton btnsee;
+    private javax.swing.JButton btnshow;
+    private javax.swing.JLabel labcurrval;
+    private javax.swing.JLabel oppbal;
+
+    // Connection compponents
+    DataInputStream din;
+    DataOutputStream dout;
+
+    // Game Variables
+
+    int YourBalanceValue;// host
+    int PoolBalanceValue;
+    int OppositeBalanceValue;// player
+    int CurrentBitValue;
+    int Increment;
+    boolean BtnVisible;
+    String ALLCARDS[] = new String[6];
+    String MyCards[] = new String[3];
+    boolean isVisibleCards;
+    boolean hasOpponentSeen;
+    int k;
+    boolean isSeen;
+    Thread th;
+    Thread Sender;
+
+    void removeAllThreadsFromHost() {
+        th.interrupt();
+        Sender.interrupt();
+    }
+
+    HostGame(DataInputStream din, DataOutputStream dout, String[] allcards) {
+        this.din = din;
+        this.dout = dout;
+
+        // CardGetter cardGetter=new CardGetter();
+        // MyCards=cardGetter.GetMyCards();
+        this.ALLCARDS = allcards;
+        MyCards[0] = ALLCARDS[0];
+        MyCards[1] = ALLCARDS[1];
+        MyCards[2] = ALLCARDS[2];
+        isSeen = false;
+
+        k = 0;
+
+        isVisibleCards = false;
+
+        YourBalanceValue = 1000;// host
+        PoolBalanceValue = 0;
+        OppositeBalanceValue = YourBalanceValue;// player
+        CurrentBitValue = 10;
+        Increment = 0;
+        BtnVisible = true;
+        hasOpponentSeen = false;
+
+        IncrementBit = new javax.swing.JButton();
+        btnbet = new javax.swing.JButton();
+        btnshow = new javax.swing.JButton();
+        btnpack = new javax.swing.JButton();
+        C3 = new javax.swing.JLabel();
+        C1 = new javax.swing.JLabel();
+        C2 = new javax.swing.JLabel();
+        labcurrval = new javax.swing.JLabel();// Current Bit Value
+        OppPlayerFace = new javax.swing.JLabel();
+        TurnIndicator = new javax.swing.JLabel();
+        oppbal = new javax.swing.JLabel();
+        PoolBalance = new javax.swing.JLabel();
+        btnsee = new javax.swing.JButton();
+        DecrementBit = new javax.swing.JButton();
+        YourBalance = new javax.swing.JLabel();
+        Kaalein = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Card Game ");
+        setMinimumSize(new java.awt.Dimension(910, 584));
+        getContentPane().setLayout(null);
+
+        IncrementBit.setBackground(new java.awt.Color(102, 255, 255));
+        IncrementBit.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        IncrementBit.setText("+");
+        IncrementBit.setAlignmentY(0.0F);
+        IncrementBit.setAutoscrolls(true);
+        IncrementBit.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        IncrementBit.setMaximumSize(new java.awt.Dimension(100, 100));
+        IncrementBit.setMinimumSize(new java.awt.Dimension(100, 100));
+        IncrementBit.setPreferredSize(new java.awt.Dimension(100, 100));
+        IncrementBit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                IncrementBitActionPerformed(evt);
+            }
+        });
+        getContentPane().add(IncrementBit);
+        IncrementBit.setBounds(660, 420, 60, 50);
+
+        btnbet.setBackground(new java.awt.Color(255, 102, 51));
+        btnbet.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnbet.setText("BET");
+        btnbet.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        getContentPane().add(btnbet);
+        btnbet.setBounds(760, 460, 100, 50);
+
+        btnshow.setBackground(new java.awt.Color(102, 255, 255));
+        btnshow.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnshow.setText("SHOW");
+        btnshow.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnshow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnshowActionPerformed(evt);
+            }
+        });
+        getContentPane().add(btnshow);
+        btnshow.setBounds(60, 400, 100, 50);
+
+        btnpack.setBackground(new java.awt.Color(102, 255, 255));
+        btnpack.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnpack.setText("PACK");
+        btnpack.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnpack.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnpackActionPerformed(evt);
+            }
+        });
+        getContentPane().add(btnpack);
+        btnpack.setBounds(60, 470, 100, 50);
+
+        C3.setIcon(new javax.swing.ImageIcon("card_back.png")); // NOI18N
+        getContentPane().add(C3);
+        C3.setBounds(690, 190, 153, 220);
+
+        C1.setIcon(new javax.swing.ImageIcon("card_back.png")); // NOI18N
+        getContentPane().add(C1);
+        C1.setBounds(350, 190, 153, 220);
+
+        C2.setIcon(new javax.swing.ImageIcon("card_back.png")); // NOI18N
+        getContentPane().add(C2);
+        C2.setBounds(520, 190, 153, 220);
+
+        labcurrval.setBackground(new java.awt.Color(0, 0, 0));
+        labcurrval.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        labcurrval.setForeground(new java.awt.Color(255, 51, 51));
+        labcurrval.setText("$ current bit value");
+        labcurrval.setOpaque(true);
+        getContentPane().add(labcurrval);
+        labcurrval.setBounds(310, 420, 330, 50);
+
+        OppPlayerFace.setIcon(new javax.swing.ImageIcon("opposite-player-final.png")); // NOI18N
+        getContentPane().add(OppPlayerFace);
+        OppPlayerFace.setBounds(50, 40, 211, 170);
+
+        TurnIndicator.setBackground(new java.awt.Color(0, 0, 0));
+        TurnIndicator.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        TurnIndicator.setForeground(new java.awt.Color(0, 0, 255));
+        TurnIndicator.setText("Player 1's TURN");
+        TurnIndicator.setOpaque(true);
+        getContentPane().add(TurnIndicator);
+        TurnIndicator.setBounds(350, 40, 280, 50);
+
+        oppbal.setBackground(new java.awt.Color(0, 0, 0));
+        oppbal.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
+        oppbal.setForeground(new java.awt.Color(255, 51, 51));
+        oppbal.setText("$ opposite val");
+        oppbal.setOpaque(true);
+        getContentPane().add(oppbal);
+        oppbal.setBounds(60, 220, 190, 40);
+
+        PoolBalance.setBackground(new java.awt.Color(0, 0, 0));
+        PoolBalance.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        PoolBalance.setForeground(new java.awt.Color(0, 255, 51));
+        PoolBalance.setText("$ PoolValue");
+        PoolBalance.setOpaque(true);
+        getContentPane().add(PoolBalance);
+        PoolBalance.setBounds(300, 110, 420, 70);
+
+        btnsee.setBackground(new java.awt.Color(102, 255, 255));
+        btnsee.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnsee.setText("SEE CARDS");
+        btnsee.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        getContentPane().add(btnsee);
+        btnsee.setBounds(50, 330, 130, 50);
+
+        DecrementBit.setBackground(new java.awt.Color(102, 255, 255));
+        DecrementBit.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        DecrementBit.setText("-");
+        DecrementBit.setAlignmentY(0.0F);
+        DecrementBit.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        DecrementBit.setMaximumSize(new java.awt.Dimension(100, 100));
+        DecrementBit.setMinimumSize(new java.awt.Dimension(100, 100));
+        DecrementBit.setPreferredSize(new java.awt.Dimension(100, 100));
+        DecrementBit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                DecrementBitActionPerformed(evt);
+            }
+        });
+        getContentPane().add(DecrementBit);
+        DecrementBit.setBounds(230, 420, 60, 50);
+
+        YourBalance.setBackground(new java.awt.Color(0, 0, 0));
+        YourBalance.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        YourBalance.setForeground(new java.awt.Color(153, 255, 153));
+        YourBalance.setText("$ Your Balance");
+        YourBalance.setOpaque(true);
+        getContentPane().add(YourBalance);
+        YourBalance.setBounds(310, 490, 330, 40);
+
+        Kaalein.setIcon(new javax.swing.ImageIcon("back.jpg")); // NOI18N
+        getContentPane().add(Kaalein);
+        Kaalein.setBounds(0, 0, 910, 580);
+
+        // Initialising All THe components As Per the Initial Values of Game
+        YourBalance.setText("$ " + YourBalanceValue);
+        PoolBalance.setText("$ " + PoolBalanceValue);
+        oppbal.setText("$ " + OppositeBalanceValue);
+        TurnIndicator.setText("Your Turn!");
+        labcurrval.setText("$ " + CurrentBitValue);
+
+        pack();
+        setVisible(true);
+
+        // Setting Action Handlers to Buttons
+        // Bet Button
+        btnbet.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                k++;
+                btnbet.setVisible(false);
+                btnpack.setVisible(false);
+                btnshow.setVisible(false);
+                btnsee.setVisible(false);
+                IncrementBit.setVisible(false);
+                DecrementBit.setVisible(false);
+                Increment = 0;
+                YourBalanceValue -= CurrentBitValue;
+                PoolBalanceValue += CurrentBitValue;
+                try {
+                    // if (k == 1) {
+                    // dout.writeUTF("passing");
+                    // dout.writeUTF(ALLCARDS[0]);
+                    // dout.writeUTF(ALLCARDS[1]);
+                    // dout.writeUTF(ALLCARDS[2]);
+                    // dout.writeUTF(ALLCARDS[3]);
+                    // dout.writeUTF(ALLCARDS[4]);
+                    // dout.writeUTF(ALLCARDS[5]);
+                    // } else {
+                    // dout.writeUTF("continue");
+                    // }
+                    // dout.writeInt(YourBalanceValue);
+                    // dout.writeInt(PoolBalanceValue);
+                    // dout.writeInt(CurrentBitValue);
+
+                    String actionPayload = Utility.packData(YourBalanceValue, PoolBalanceValue, OppositeBalanceValue,
+                            CurrentBitValue,
+                            Increment, false, allcards, allcards, isVisibleCards, 0, isSeen, "BET", "");
+                    dout.writeUTF(actionPayload);
+
+                } catch (Exception ex3) {
+                    // TODO: handle exception
+                }
+                TurnIndicator.setText("Player's Turn");
+                YourBalance.setText("$ " + YourBalanceValue);
+                PoolBalance.setText("$ " + PoolBalanceValue);
+                oppbal.setText("$ " + OppositeBalanceValue);
+                labcurrval.setText("$ " + CurrentBitValue);
+
+                try {
+                    th.notify();
+                } catch (Exception ex5) {
+                    // TODO: handle exception
+                }
+            }
+        });
+
+        // Increment Button
+        IncrementBit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (Increment == 1)
+                    return;
+                else {
+                    if (CurrentBitValue * 2 > YourBalanceValue) {
+                        return;
+                    }
+
+                    CurrentBitValue *= 2;
+                    labcurrval.setText("$ " + CurrentBitValue);
+                    Increment++;
+                }
+            }
+        });
+
+        // Decrement Button
+        DecrementBit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (Increment == 0)
+                    return;
+                else {
+                    CurrentBitValue /= 2;
+                    labcurrval.setText("$ " + CurrentBitValue);
+                    Increment--;
+                }
+            }
+        });
+
+        // See Cards Button
+        btnsee.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                // Implement The Logic
+                // (ImageIcon)ImageIconGetter.GetTheImageIcon(MyCards[0])
+                isSeen = true;
+
+                if (isVisibleCards == false) {
+                    C1.setIcon(new ImageIcon(new ImageIconGetter().GetTheImageIcon(MyCards[0])));
+                    C2.setIcon(new ImageIcon(new ImageIconGetter().GetTheImageIcon(MyCards[1])));
+                    C3.setIcon(new ImageIcon(new ImageIconGetter().GetTheImageIcon(MyCards[2])));
+                    isVisibleCards = true;
+                } else {
+                    C1.setIcon(new ImageIcon("card_back.png"));
+                    C2.setIcon(new ImageIcon("card_back.png"));
+                    C3.setIcon(new ImageIcon("card_back.png"));
+                    isVisibleCards = false;
+                }
+            }
+        });
+
+        // Pack Button
+        btnpack.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    String[] buttonOptions = { "Yes", "No" };
+
+                    int userChoiceForPack = Utility.showGameResultDialog("Are you sure you want to pack?",
+                            buttonOptions);
+
+                    if (userChoiceForPack != 0) {
+                        return; // User chose "No" or closed the dialog
+                    }
+
+                    dout.writeUTF(
+                            Utility.packData(YourBalanceValue, PoolBalanceValue, OppositeBalanceValue, CurrentBitValue,
+                                    Increment, false, allcards, allcards, isVisibleCards, 0, isSeen, "PACK", ""));
+
+                    C1.setIcon(new ImageIcon("card_back.png"));
+                    C2.setIcon(new ImageIcon("card_back.png"));
+                    C3.setIcon(new ImageIcon("card_back.png"));
+                    isVisibleCards = false;
+                    isSeen = false;
+
+                    // 5. Reset the game state for the next round (done once for all outcomes)
+                    isSeen = false;
+                    hasOpponentSeen = false;
+                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                    PoolBalanceValue = 0;
+                    CurrentBitValue = 10;
+                    Increment = 0;
+
+                    TurnIndicator.setText("PLAYER WILL START");
+                    YourBalance.setText("$ " + YourBalanceValue);
+                    PoolBalance.setText("$ " + PoolBalanceValue);
+                    oppbal.setText("$ " + OppositeBalanceValue);
+                    labcurrval.setText("$ " + CurrentBitValue);
+
+                    btnbet.setVisible(false);
+                    btnpack.setVisible(false);
+                    btnshow.setVisible(false);
+                    btnsee.setVisible(false);
+                    IncrementBit.setVisible(false);
+                    DecrementBit.setVisible(false);
+                    try {
+                        th.notify();
+                    } catch (Exception ex5) {
+                        // TODO: handle exception
+                    }
+
+                } catch (Exception ex6) {
+                    // TODO: handle exception
+                }
+            }
+        });
+
+        // Show Button
+        btnshow.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+
+                if (YourBalanceValue < CurrentBitValue) {
+                    JOptionPane.showMessageDialog(null, "Insufficient Balance to Show! Please Bet or Pack.");
+                    return;
+                }
+
+                YourBalanceValue -= CurrentBitValue;
+                PoolBalanceValue += CurrentBitValue;
+
+                String HostCards[] = { allcards[0], allcards[1], allcards[2] };
+                String PlayerCards[] = { allcards[3], allcards[4], allcards[5] };
+
+                // 1. Get the newly formatted result string from our Utility class
+                String matchResult = Utility.compareHands(HostCards, PlayerCards);
+
+                // 2. Sanitize the string to remove commas so it doesn't break packData's CSV
+                // format
+                String safeNetworkResult = matchResult.replace(",", "");
+
+                try {
+                    String actionPayload = Utility.packData(
+                            YourBalanceValue, PoolBalanceValue, OppositeBalanceValue,
+                            CurrentBitValue, Increment, false, allcards, allcards,
+                            isVisibleCards, 0, isSeen, "SHOW", safeNetworkResult);
+
+                    dout.writeUTF(actionPayload);
+                    dout.flush();
+
+                } catch (Exception x7) {
+                    System.out.println("Error sending SHOW payload from Host: " + x7.getMessage());
+                }
+
+                boolean isHostLoss = matchResult.startsWith("Player wins");
+                boolean isTie = matchResult.startsWith("It's a Tie");
+
+                // 4. Build the display message (matchResult already explains exactly who had
+                // what cards!)
+                String messageToDisplay = matchResult + "\n\nPlayer will Start New Game!";
+
+                // 5. Update Balances based on the outcome
+                if (isHostLoss) {
+                    OppositeBalanceValue += PoolBalanceValue; // Player takes the pool
+                } else if (isTie) {
+                    // In a tie, split the pool evenly
+                    YourBalanceValue += PoolBalanceValue / 2;
+                    OppositeBalanceValue += PoolBalanceValue / 2;
+                } else {
+                    // Host wins
+                    YourBalanceValue += PoolBalanceValue; // Host takes the pool
+                }
+
+                // 6. Reset the game state for the next round (consolidated for cleaner code)
+                isVisibleCards = false;
+                hasOpponentSeen = false;
+                BtnVisible = true;
+                PoolBalanceValue = 0;
+                CurrentBitValue = 10;
+                Increment = 0;
+
+                TurnIndicator.setText("Your Turn!");
+                YourBalance.setText("$ " + YourBalanceValue);
+                PoolBalance.setText("$ " + PoolBalanceValue);
+                oppbal.setText("$ " + OppositeBalanceValue);
+                labcurrval.setText("$ " + CurrentBitValue);
+
+                btnbet.setVisible(false);
+                btnpack.setVisible(false);
+                btnshow.setVisible(false);
+                btnsee.setVisible(false);
+                IncrementBit.setVisible(false);
+                DecrementBit.setVisible(false);
+                Increment = 0;
+
+                try {
+                    th.notify();
+                } catch (Exception ex5) {
+                    // TODO: handle exception
+                }
+
+                // 2. Setup and show the dialog using our custom function
+                String[] options = { "Okay" };
+                int choice = Utility.showGameResultDialog(messageToDisplay, options);
+
+                // 3. Handle the user's choice
+                if (choice == 0) {
+                    // "Exit Game" button clicked (index 0)
+                    System.out.println("Host Gone");
+                } else {
+                    // Dialog closed without selecting a button (e.g., clicking 'X')
+                    System.out.println("Dialog was closed without a selection.");
+                }
+                C1.setIcon(new ImageIcon("card_back.png"));
+                C2.setIcon(new ImageIcon("card_back.png"));
+                C3.setIcon(new ImageIcon("card_back.png"));
+                isVisibleCards = false;
+                isSeen = false;
+
+            }
+        });
+
+        // This thread is used to Accept Input from Player Game
+        th = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // TODO Auto-generated method stub
+                while (true) {
+                    try {
+                        this.wait();
+                    } catch (Exception ex6) {
+                        // TODO: handle exception
+                    }
+
+                    String action = "";
+                    try {
+                        // String x = din.readUTF();
+
+                        String actionPayload = din.readUTF();
+
+                        String[] data = Utility.unpackData(actionPayload);
+                        String result = "";
+
+                        if (data.length >= 13) {
+                            OppositeBalanceValue = Integer.parseInt(data[0]);
+                            PoolBalanceValue = Integer.parseInt(data[1]);
+                            YourBalanceValue = Integer.parseInt(data[2]);
+
+                            CurrentBitValue = Integer.parseInt(data[3]);
+
+                            // Rebuild your array sub-strings by splitting on the dash
+                            ALLCARDS = data[6].equals("null") ? null : data[6].split("-");
+
+                            allcards[0] = ALLCARDS[0];
+                            allcards[1] = ALLCARDS[1];
+                            allcards[2] = ALLCARDS[2];
+                            allcards[3] = ALLCARDS[3];
+                            allcards[4] = ALLCARDS[4];
+                            allcards[5] = ALLCARDS[5];
+
+                            MyCards[0] = allcards[0];
+                            MyCards[1] = allcards[1];
+                            MyCards[2] = allcards[2];
+
+                            hasOpponentSeen = hasOpponentSeen || Boolean.parseBoolean(data[10]);
+
+                            action = data[11];
+                            result = data[12];
+                        }
+
+                        System.out.println("Received action from Player: " + action);
+
+                        switch (action) {
+                            case "BET":
+                                System.out.println("Player BET");
+                                break;
+                            case "PACK":
+                                YourBalanceValue += PoolBalanceValue;
+                                isSeen = false;
+                                hasOpponentSeen = false;
+                                PoolBalanceValue = 0;
+                                CurrentBitValue = 10;
+                                Increment = 0;
+
+                                TurnIndicator.setText("Your Turn!");
+                                YourBalance.setText("$ " + YourBalanceValue);
+                                PoolBalance.setText("$ " + PoolBalanceValue);
+                                oppbal.setText("$ " + OppositeBalanceValue);
+                                labcurrval.setText("$ " + CurrentBitValue);
+
+                                String[] buttonOptions = { "Next Game", "Exit Game" };
+
+                                int userChoice = Utility.showGameResultDialog("You Won! Host Packed!", buttonOptions);
+
+                                // Handle the result
+                                if (userChoice == 0) {
+                                    System.out.println("Host clicked Next Game");
+
+                                    String allNewCards[] = Utility.getRandomCards(6);
+                                    allcards[0] = allNewCards[0];
+                                    allcards[1] = allNewCards[1];
+                                    allcards[2] = allNewCards[2];
+                                    allcards[3] = allNewCards[3];
+                                    allcards[4] = allNewCards[4];
+                                    allcards[5] = allNewCards[5];
+
+                                    System.out.println(
+                                            "New cards generated for the next game from Player:"
+                                                    + Arrays.toString(allcards));
+
+                                    MyCards[0] = allcards[3];
+                                    MyCards[1] = allcards[4];
+                                    MyCards[2] = allcards[5];
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen, "NEWGAME",
+                                            ""));
+                                    dout.flush();
+                                    C1.setIcon(new ImageIcon("card_back.png"));
+                                    C2.setIcon(new ImageIcon("card_back.png"));
+                                    C3.setIcon(new ImageIcon("card_back.png"));
+                                    isVisibleCards = false;
+                                    isSeen = false;
+                                    TurnIndicator.setText("Player's Turn!");
+                                    btnbet.setVisible(false);
+                                    btnpack.setVisible(false);
+                                    btnshow.setVisible(false);
+                                    btnsee.setVisible(false);
+                                    IncrementBit.setVisible(false);
+                                    DecrementBit.setVisible(false);
+                                } else if (userChoice == 1) {
+                                    System.out.println("Host clicked Exit Game");
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen, "EXITGAME",
+                                            ""));
+                                    dout.flush();
+                                    setVisible(false);
+                                    return;
+                                } else {
+                                    System.out.println("Dialog was closed without a selection.");
+                                    setVisible(false);
+                                    return;
+                                }
+                                break;
+                            case "SHOW":
+                                System.out.println("Player has SHOWED!");
+                                boolean isHostWin = result.startsWith("Host wins");
+                                boolean isTie = result.startsWith("It's a Tie");
+
+                                // 1. Build the personalized display message for the Host
+                                String messageToDisplay;
+                                if (isTie) {
+                                    messageToDisplay = "It's a Tie! " + result + "\n";
+                                } else if (isHostWin) {
+                                    messageToDisplay = "You won! " + result + "\n";
+                                } else {
+                                    // If it's not a tie and the host didn't win, the host lost
+                                    messageToDisplay = "You lost! " + result + "\n";
+                                }
+                                if (isHostWin) {
+                                    YourBalanceValue += PoolBalanceValue; // Host takes the pool
+                                } else if (isTie) {
+                                    YourBalanceValue += PoolBalanceValue / 2;
+                                    OppositeBalanceValue += PoolBalanceValue / 2; // Split the pool
+                                } else {
+                                    OppositeBalanceValue += PoolBalanceValue; // Player takes the pool
+                                }
+
+                                isSeen = false;
+                                hasOpponentSeen = false;
+                                PoolBalanceValue = 0;
+                                CurrentBitValue = 10;
+                                Increment = 0;
+
+                                try {
+                                    String[] buttonOptionsForShow = { "Next Game", "Exit Game" };
+
+                                    int userChoiceForShow = Utility.showGameResultDialog(messageToDisplay,
+                                            buttonOptionsForShow);
+
+                                    if (userChoiceForShow == 0) {
+                                        System.out.println("Host clicked Next Game");
+
+                                        String allNewCards[] = Utility.getRandomCards(6);
+                                        allcards[0] = allNewCards[0];
+                                        allcards[1] = allNewCards[1];
+                                        allcards[2] = allNewCards[2];
+                                        allcards[3] = allNewCards[3];
+                                        allcards[4] = allNewCards[4];
+                                        allcards[5] = allNewCards[5];
+
+                                        System.out.println(
+                                                "New cards generated for the next game from Host:"
+                                                        + Arrays.toString(allcards));
+
+                                        MyCards[0] = allcards[0];
+                                        MyCards[1] = allcards[1];
+                                        MyCards[2] = allcards[2];
+
+                                        dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                                OppositeBalanceValue, CurrentBitValue, 0,
+                                                isSeen, allcards, allcards, isVisibleCards,
+                                                userChoiceForShow, isSeen,
+                                                "NEWGAME",
+                                                ""));
+                                        dout.flush();
+
+                                        C1.setIcon(new ImageIcon("card_back.png"));
+                                        C2.setIcon(new ImageIcon("card_back.png"));
+                                        C3.setIcon(new ImageIcon("card_back.png"));
+                                        isVisibleCards = false;
+                                        isSeen = false;
+                                        TurnIndicator.setText("Player's Turn!");
+                                        btnbet.setVisible(false);
+                                        btnpack.setVisible(false);
+                                        btnshow.setVisible(false);
+                                        btnsee.setVisible(false);
+                                        IncrementBit.setVisible(false);
+                                        DecrementBit.setVisible(false);
+                                    } else if (userChoiceForShow == 1) {
+                                        System.out.println("Host clicked Exit Game");
+                                        dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                                OppositeBalanceValue, CurrentBitValue, 0,
+                                                isSeen, allcards, allcards, isVisibleCards, userChoiceForShow, isSeen,
+                                                "EXITGAME",
+                                                ""));
+                                        dout.flush();
+                                        setVisible(false);
+                                        return;
+                                    } else {
+                                        System.out.println("Dialog was closed without a selection.");
+                                        setVisible(false);
+                                        return;
+                                    }
+                                    // removeAllThreadsFromHost();
+                                    // setVisible(false);
+                                    // return;
+
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                break;
+                            case "NEWGAME":
+                                System.out.println("1. Background Thread: Received NEXTGAME signal");
+
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ImageIcon backIcon = new ImageIcon("card_back.png");
+
+                                        // Set icon AND repaint each label individually
+                                        C1.setIcon(backIcon);
+                                        C1.revalidate();
+                                        C1.repaint();
+
+                                        C2.setIcon(backIcon);
+                                        C2.revalidate();
+                                        C2.repaint();
+
+                                        C3.setIcon(backIcon);
+                                        C3.revalidate();
+                                        C3.repaint();
+
+                                        TurnIndicator.setText("Your Turn!");
+                                        YourBalance.setText("$ " + YourBalanceValue);
+                                        PoolBalance.setText("$ " + PoolBalanceValue);
+                                        oppbal.setText("$ " + OppositeBalanceValue);
+                                        labcurrval.setText("$ " + CurrentBitValue);
+
+                                        btnbet.setVisible(true);
+                                        btnpack.setVisible(true);
+                                        btnshow.setVisible(true);
+                                        btnsee.setVisible(true);
+                                        IncrementBit.setVisible(true);
+                                        DecrementBit.setVisible(true);
+
+                                        // Repaint the whole frame last
+                                        getContentPane().revalidate();
+                                        HostGame.this.repaint();
+                                    }
+                                });
+                                isVisibleCards = false;
+                                isSeen = false;
+                                System.out.println("INSIDE HOST NEW GAME ");
+                                break;
+                            case "EXITGAME":
+                                System.out.println("Host clicked Exit Game");
+                                removeAllThreadsFromHost();
+                                setVisible(false);
+                                return;
+                            default:
+                                // Handle unknown action
+                                break;
+                        }
+                        if (!action.equals("SHOW")) {
+                            TurnIndicator.setText("Your Turn!");
+                        }
+                        YourBalance.setText("$ " + YourBalanceValue);
+                        PoolBalance.setText("$ " + PoolBalanceValue);
+                        oppbal.setText("$ " + OppositeBalanceValue);
+                        labcurrval.setText("$ " + CurrentBitValue);
+                    } catch (Exception ex2) {
+                        // TODO: handle exception
+                        System.out.println("Error while reading from host: " + ex2.getMessage());
+                        setVisible(false);
+                        return;
+                    }
+                    if (CurrentBitValue > YourBalanceValue) {
+                        // Show Dialog and Tell Him to Pack THe Game
+                        JFrame f = new JFrame();
+                        JOptionPane.showMessageDialog(f, "Low Balance\nCurrent Bit Value:-" + CurrentBitValue
+                                + "\nYour Balance:-" + YourBalanceValue);
+                        try {
+                            dout.writeUTF("ilose");
+                        } catch (Exception e) {
+                            // TODO: handle exception
+                        }
+                        setVisible(false);
+                        return;
+                    }
+
+                    try {
+                        if (!action.equals("SHOW") && !action.equals("PACK")) {
+                            btnbet.setVisible(true);
+                            btnpack.setVisible(true);
+                            btnshow.setVisible(true);
+                            btnsee.setVisible(true);
+                            IncrementBit.setVisible(true);
+                            DecrementBit.setVisible(true);
+                            this.wait();
+                        }
+                    } catch (Exception ex) {
+                        // Handle exception
+                    }
+
+                }
+            }
+
+        });
+        th.start();
+        // End Of Host Code
+        System.out.println("👀 VISIBLE WINDOW CREATED! Memory ID: " + this.hashCode());
+    }
+
+    private void btnshowActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+
+    private void btnpackActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+
+    private void IncrementBitActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+
+    private void DecrementBitActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+}
+
+class PlayerGame extends javax.swing.JFrame {
+    private javax.swing.JLabel C1;
+    private javax.swing.JLabel C2;
+    private javax.swing.JLabel C3;
+    private javax.swing.JButton DecrementBit;
+    private javax.swing.JButton IncrementBit;
+    private javax.swing.JLabel Kaalein;
+    private javax.swing.JLabel OppPlayerFace;
+    private javax.swing.JLabel PoolBalance;
+    private javax.swing.JLabel TurnIndicator;
+    private javax.swing.JLabel YourBalance;
+    private javax.swing.JButton btnbet;
+    private javax.swing.JButton btnpack;
+    private javax.swing.JButton btnsee;
+    private javax.swing.JButton btnshow;
+    private javax.swing.JLabel labcurrval;
+    private javax.swing.JLabel oppbal;
+
+    // connection Components
+    DataInputStream din;
+    DataOutputStream dout;
+
+    // Game Variables
+    int YourBalanceValue;// player
+    int PoolBalanceValue;
+    int OppositeBalanceValue;// host
+    int CurrentBitValue;
+    int Increment;
+    String ALLCARDS[] = new String[6];
+    String MyCards[] = new String[3];
+    boolean isVisibleCards = false;
+    boolean isSeen;
+    boolean hasOpponentSeen;
+    Thread th, Send;
+
+    void removeAllThreads() {
+        th.interrupt();
+        Send.interrupt();
+    }
+
+    PlayerGame(DataInputStream din, DataOutputStream dout, String[] allcards) {
+        this.din = din;
+        this.dout = dout;
+
+        // CardGetter cardGetter=nasdasdew CardGetter();
+        // MyCards=cardGetter.GetMyCards();
+
+        isSeen = false;
+        hasOpponentSeen = false;
+        YourBalanceValue = 1000;// host
+        PoolBalanceValue = 0;
+        OppositeBalanceValue = YourBalanceValue;// player
+        CurrentBitValue = 10;
+        Increment = 0;
+
+        IncrementBit = new javax.swing.JButton();
+        btnbet = new javax.swing.JButton();
+        btnshow = new javax.swing.JButton();
+        btnpack = new javax.swing.JButton();
+        C3 = new javax.swing.JLabel();
+        C1 = new javax.swing.JLabel();
+        C2 = new javax.swing.JLabel();
+        labcurrval = new javax.swing.JLabel();
+        OppPlayerFace = new javax.swing.JLabel();
+        TurnIndicator = new javax.swing.JLabel();
+        oppbal = new javax.swing.JLabel();
+        PoolBalance = new javax.swing.JLabel();
+        btnsee = new javax.swing.JButton();
+        DecrementBit = new javax.swing.JButton();
+        YourBalance = new javax.swing.JLabel();
+        Kaalein = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Card Game ");
+        setMinimumSize(new java.awt.Dimension(910, 584));
+        getContentPane().setLayout(null);
+
+        IncrementBit.setBackground(new java.awt.Color(102, 255, 255));
+        IncrementBit.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        IncrementBit.setText("+");
+        IncrementBit.setAlignmentY(0.0F);
+        IncrementBit.setAutoscrolls(true);
+        IncrementBit.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        IncrementBit.setMaximumSize(new java.awt.Dimension(100, 100));
+        IncrementBit.setMinimumSize(new java.awt.Dimension(100, 100));
+        IncrementBit.setPreferredSize(new java.awt.Dimension(100, 100));
+        IncrementBit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                IncrementBitActionPerformed(evt);
+            }
+        });
+        getContentPane().add(IncrementBit);
+        IncrementBit.setBounds(660, 420, 60, 50);
+
+        btnbet.setBackground(new java.awt.Color(255, 102, 51));
+        btnbet.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnbet.setText("BET");
+        btnbet.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        getContentPane().add(btnbet);
+        btnbet.setBounds(760, 460, 100, 50);
+
+        btnshow.setBackground(new java.awt.Color(102, 255, 255));
+        btnshow.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnshow.setText("SHOW");
+        btnshow.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnshow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnshowActionPerformed(evt);
+            }
+        });
+        getContentPane().add(btnshow);
+        btnshow.setBounds(60, 400, 100, 50);
+
+        btnpack.setBackground(new java.awt.Color(102, 255, 255));
+        btnpack.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnpack.setText("PACK");
+        btnpack.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnpack.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnpackActionPerformed(evt);
+            }
+        });
+        getContentPane().add(btnpack);
+        btnpack.setBounds(60, 470, 100, 50);
+
+        C3.setIcon(new javax.swing.ImageIcon("card_back.png")); // NOI18N
+        getContentPane().add(C3);
+        C3.setBounds(690, 190, 153, 220);
+
+        C1.setIcon(new javax.swing.ImageIcon("card_back.png")); // NOI18N
+        getContentPane().add(C1);
+        C1.setBounds(350, 190, 153, 220);
+
+        C2.setIcon(new javax.swing.ImageIcon("card_back.png")); // NOI18N
+        getContentPane().add(C2);
+        C2.setBounds(520, 190, 153, 220);
+
+        labcurrval.setBackground(new java.awt.Color(0, 0, 0));
+        labcurrval.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        labcurrval.setForeground(new java.awt.Color(255, 51, 51));
+        labcurrval.setText("$ current bit value");
+        labcurrval.setOpaque(true);
+        getContentPane().add(labcurrval);
+        labcurrval.setBounds(310, 420, 330, 50);
+
+        OppPlayerFace.setIcon(new javax.swing.ImageIcon("opposite-player-final.png")); // NOI18N
+        getContentPane().add(OppPlayerFace);
+        OppPlayerFace.setBounds(50, 40, 211, 170);
+
+        TurnIndicator.setBackground(new java.awt.Color(0, 0, 0));
+        TurnIndicator.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        TurnIndicator.setForeground(new java.awt.Color(0, 0, 255));
+        TurnIndicator.setText("Player 1's TURN");
+        TurnIndicator.setOpaque(true);
+        getContentPane().add(TurnIndicator);
+        TurnIndicator.setBounds(350, 40, 280, 50);
+
+        oppbal.setBackground(new java.awt.Color(0, 0, 0));
+        oppbal.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
+        oppbal.setForeground(new java.awt.Color(255, 51, 51));
+        oppbal.setText("$ opposite val");
+        oppbal.setOpaque(true);
+        getContentPane().add(oppbal);
+        oppbal.setBounds(60, 220, 190, 40);
+
+        PoolBalance.setBackground(new java.awt.Color(0, 0, 0));
+        PoolBalance.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        PoolBalance.setForeground(new java.awt.Color(0, 255, 51));
+        PoolBalance.setText("$ PoolValue");
+        PoolBalance.setOpaque(true);
+        getContentPane().add(PoolBalance);
+        PoolBalance.setBounds(300, 110, 420, 70);
+
+        btnsee.setBackground(new java.awt.Color(102, 255, 255));
+        btnsee.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        btnsee.setText("SEE CARDS");
+        btnsee.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        getContentPane().add(btnsee);
+        btnsee.setBounds(50, 330, 130, 50);
+
+        DecrementBit.setBackground(new java.awt.Color(0, 153, 153));
+        DecrementBit.setFont(new java.awt.Font("Segoe UI", 1, 48)); // NOI18N
+        DecrementBit.setText("-");
+        DecrementBit.setAlignmentY(0.0F);
+        DecrementBit.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        DecrementBit.setMaximumSize(new java.awt.Dimension(100, 100));
+        DecrementBit.setMinimumSize(new java.awt.Dimension(100, 100));
+        DecrementBit.setPreferredSize(new java.awt.Dimension(100, 100));
+        DecrementBit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                DecrementBitActionPerformed(evt);
+            }
+        });
+        getContentPane().add(DecrementBit);
+        DecrementBit.setBounds(230, 420, 60, 50);
+
+        YourBalance.setBackground(new java.awt.Color(0, 0, 0));
+        YourBalance.setFont(new java.awt.Font("Segoe UI", 1, 36)); // NOI18N
+        YourBalance.setForeground(new java.awt.Color(153, 255, 153));
+        YourBalance.setText("$ Your Balance");
+        YourBalance.setOpaque(true);
+        getContentPane().add(YourBalance);
+        YourBalance.setBounds(310, 490, 330, 40);
+
+        Kaalein.setIcon(new javax.swing.ImageIcon("back.jpg")); // NOI18N
+        getContentPane().add(Kaalein);
+        Kaalein.setBounds(0, 0, 910, 580);
+
+        YourBalance.setText("$ " + YourBalanceValue);
+        PoolBalance.setText("$ " + PoolBalanceValue);
+        oppbal.setText("$ " + OppositeBalanceValue);
+        TurnIndicator.setText("Host's Turn!");
+        labcurrval.setText("$ " + CurrentBitValue);
+
+        btnbet.setVisible(false);
+        btnpack.setVisible(false);
+        btnshow.setVisible(false);
+        btnsee.setVisible(false);
+        IncrementBit.setVisible(false);
+        DecrementBit.setVisible(false);
+
+        pack();
+        setVisible(true);
+
+        // Setting Action Handlers to Buttons
+        // Bet Button
+        btnbet.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Increment = 0;
+
+                YourBalanceValue -= CurrentBitValue;
+                PoolBalanceValue += CurrentBitValue;
+                try {
+                    // dout.writeUTF("continue");
+                    // dout.writeInt(YourBalanceValue);
+                    // dout.writeInt(PoolBalanceValue);
+                    // dout.writeInt(CurrentBitValue);
+
+                    dout.writeUTF(
+                            Utility.packData(YourBalanceValue, PoolBalanceValue, OppositeBalanceValue, CurrentBitValue,
+                                    Increment, false, allcards, allcards, isVisibleCards, 0, isSeen, "BET", ""));
+
+                } catch (Exception ex3) {
+                    // TODO: handle exception
+                }
+                TurnIndicator.setText("Host's Turn");
+                YourBalance.setText("$ " + YourBalanceValue);
+                PoolBalance.setText("$ " + PoolBalanceValue);
+                oppbal.setText("$ " + OppositeBalanceValue);
+                labcurrval.setText("$ " + CurrentBitValue);
+                try {
+                    btnbet.setVisible(false);
+                    btnpack.setVisible(false);
+                    btnshow.setVisible(false);
+                    btnsee.setVisible(false);
+                    IncrementBit.setVisible(false);
+                    DecrementBit.setVisible(false);
+                    th.notify();
+
+                } catch (Exception ex7) {
+                    // TODO: handle exception
+                }
+            }
+        });
+
+        // Increment Button
+        IncrementBit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (Increment == 1)
+                    return;
+                else {
+                    if (CurrentBitValue * 2 > YourBalanceValue) {
+                        return;
+                    }
+                    CurrentBitValue *= 2;
+                    labcurrval.setText("$ " + CurrentBitValue);
+                    Increment++;
+                }
+            }
+        });
+
+        // Decrement Button
+        DecrementBit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (Increment == 0)
+                    return;
+                else {
+                    CurrentBitValue /= 2;
+                    labcurrval.setText("$ " + CurrentBitValue);
+                    Increment--;
+                }
+            }
+        });
+
+        // See Cards Button
+        btnsee.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                // Implement The Logic
+                // (ImageIcon)ImageIconGetter.GetTheImageIcon(MyCards[0])
+                isSeen = true;
+
+                if (isVisibleCards == false) {
+                    C1.setIcon(new ImageIcon(new ImageIconGetter().GetTheImageIcon(MyCards[0])));
+                    C2.setIcon(new ImageIcon(new ImageIconGetter().GetTheImageIcon(MyCards[1])));
+                    C3.setIcon(new ImageIcon(new ImageIconGetter().GetTheImageIcon(MyCards[2])));
+                    isVisibleCards = true;
+                } else {
+                    C1.setIcon(new ImageIcon("card_back.png"));
+                    C2.setIcon(new ImageIcon("card_back.png"));
+                    C3.setIcon(new ImageIcon("card_back.png"));
+                    isVisibleCards = false;
+                }
+            }
+        });
+
+        // Pack Button
+        btnpack.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    String[] buttonOptions = { "Yes", "No" };
+
+                    int userChoiceForPack = Utility.showGameResultDialog("Are you sure you want to pack?",
+                            buttonOptions);
+
+                    if (userChoiceForPack != 0) {
+                        return; // User chose "No" or closed the dialog
+                    }
+
+                    dout.writeUTF(
+                            Utility.packData(YourBalanceValue, PoolBalanceValue, OppositeBalanceValue, CurrentBitValue,
+                                    Increment, false, allcards, allcards, isVisibleCards, 0, isSeen, "PACK", ""));
+
+                    C1.setIcon(new ImageIcon("card_back.png"));
+                    C2.setIcon(new ImageIcon("card_back.png"));
+                    C3.setIcon(new ImageIcon("card_back.png"));
+                    isVisibleCards = false;
+                    isSeen = false;
+
+                    // 5. Reset the game state for the next round (done once for all outcomes)
+                    isSeen = false;
+                    hasOpponentSeen = false;
+                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                    PoolBalanceValue = 0;
+                    CurrentBitValue = 10;
+                    Increment = 0;
+
+                    TurnIndicator.setText("HOST WILL START");
+                    YourBalance.setText("$ " + YourBalanceValue);
+                    PoolBalance.setText("$ " + PoolBalanceValue);
+                    oppbal.setText("$ " + OppositeBalanceValue);
+                    labcurrval.setText("$ " + CurrentBitValue);
+
+                    btnbet.setVisible(false);
+                    btnpack.setVisible(false);
+                    btnshow.setVisible(false);
+                    btnsee.setVisible(false);
+                    IncrementBit.setVisible(false);
+                    DecrementBit.setVisible(false);
+                    try {
+                        th.notify();
+                    } catch (Exception ex5) {
+                        // TODO: handle exception
+                    }
+
+                } catch (Exception ex6) {
+                    // TODO: handle exception
+                }
+            }
+        });
+
+        // Show Button
+        btnshow.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+
+                if (YourBalanceValue < CurrentBitValue) {
+                    JOptionPane.showMessageDialog(null, "Insufficient Balance to Show! Please Bet or Pack.");
+                    return;
+                }
+
+                // String Result[] = new String[3];
+                // card_game x = new card_game();
+                // Result = x.GetResult(ALLCARDS);
+
+                String HostCards[] = { allcards[0], allcards[1], allcards[2] };
+                String PlayerCards[] = { allcards[3], allcards[4], allcards[5] };
+
+                // 1. Get the newly formatted result string from our Utility class
+                String matchResult = Utility.compareHands(HostCards, PlayerCards);
+
+                try {
+                    // 2. Sanitize the string! Remove commas so it doesn't break packData's CSV
+                    // format
+                    String safeNetworkResult = matchResult.replace(",", "");
+
+                    String actionPayload = Utility.packData(
+                            YourBalanceValue, PoolBalanceValue, OppositeBalanceValue,
+                            CurrentBitValue, Increment, false, allcards, allcards,
+                            isVisibleCards, 0, isSeen, "SHOW", safeNetworkResult);
+
+                    dout.writeUTF(actionPayload);
+                    dout.flush();
+
+                } catch (Exception x7) {
+                    System.out.println("Error sending SHOW payload: " + x7.getMessage());
+                }
+
+                boolean isLoss = matchResult.startsWith("Host wins");
+                boolean isTie = matchResult.startsWith("It's a Tie");
+
+                // 4. Determine the personalized outcome message
+                String customOutcome;
+                if (isTie) {
+                    customOutcome = "It's a Tie!";
+                } else if (isLoss) {
+                    customOutcome = "You lost!";
+                } else {
+                    customOutcome = "You won!";
+                }
+
+                // 5. Build the exact display message with header, outcome, context, and footer
+                String messageToDisplay = customOutcome + " (" + matchResult
+                        + ")\n\nHost will Start New Game!";
+
+                // 4. Update Balances based on the outcome
+                if (isLoss) {
+                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                } else if (isTie) {
+                    // In a tie, return half the pool to each player
+                    YourBalanceValue += PoolBalanceValue / 2;
+                    OppositeBalanceValue += PoolBalanceValue / 2;
+                } else {
+                    // Player wins
+                    YourBalanceValue += PoolBalanceValue; // Player takes the pool
+                }
+
+                // 5. Reset the game state for the next round (done once for all outcomes)
+                isSeen = false;
+                hasOpponentSeen = false;
+                PoolBalanceValue = 0;
+                CurrentBitValue = 10;
+                Increment = 0;
+
+                TurnIndicator.setText("HOST WILL START");
+                YourBalance.setText("$ " + YourBalanceValue);
+                PoolBalance.setText("$ " + PoolBalanceValue);
+                oppbal.setText("$ " + OppositeBalanceValue);
+                labcurrval.setText("$ " + CurrentBitValue);
+
+                btnbet.setVisible(false);
+                btnpack.setVisible(false);
+                btnshow.setVisible(false);
+                btnsee.setVisible(false);
+                IncrementBit.setVisible(false);
+                DecrementBit.setVisible(false);
+                try {
+                    th.notify();
+                } catch (Exception ex5) {
+                    // TODO: handle exception
+                }
+
+                // 2. Setup and show the dialog using our custom function
+                String[] options = { "Okay" };
+                Utility.showGameResultDialog(messageToDisplay, options);
+                C1.setIcon(new ImageIcon("card_back.png"));
+                C2.setIcon(new ImageIcon("card_back.png"));
+                C3.setIcon(new ImageIcon("card_back.png"));
+                isVisibleCards = false;
+                isSeen = false;
+            }
+        });
+
+        // This thread is used to accept the moves from host player
+        th = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // TODO Auto-generated method stub
+
+                while (true) {
+                    String action = "";
+                    try {
+                        String actionPayload = din.readUTF();
+
+                        String[] data = Utility.unpackData(actionPayload);
+                        action = "";
+                        String result = "";
+
+                        if (data.length >= 13) {
+                            OppositeBalanceValue = Integer.parseInt(data[0]);
+                            PoolBalanceValue = Integer.parseInt(data[1]);
+                            YourBalanceValue = Integer.parseInt(data[2]);
+
+                            CurrentBitValue = Integer.parseInt(data[3]);
+
+                            // Rebuild your array sub-strings by splitting on the dash
+                            ALLCARDS = data[6].equals("null") ? null : data[6].split("-");
+
+                            allcards[0] = ALLCARDS[0];
+                            allcards[1] = ALLCARDS[1];
+                            allcards[2] = ALLCARDS[2];
+                            allcards[3] = ALLCARDS[3];
+                            allcards[4] = ALLCARDS[4];
+                            allcards[5] = ALLCARDS[5];
+
+                            MyCards[0] = allcards[3];
+                            MyCards[1] = allcards[4];
+                            MyCards[2] = allcards[5];
+                            hasOpponentSeen = hasOpponentSeen || Boolean.parseBoolean(data[10]);
+
+                            action = data[11];
+                            result = data[12];
+                        }
+
+                        System.out.println("Received action from host: " + action);
+
+                        switch (action) {
+                            case "BET":
+                                // System.out.println("Host has BET!");
+                                break;
+                            case "PACK":
+                                YourBalanceValue += PoolBalanceValue;
+                                isSeen = false;
+                                hasOpponentSeen = false;
+                                PoolBalanceValue = 0;
+                                CurrentBitValue = 10;
+                                Increment = 0;
+
+                                TurnIndicator.setText("Your Turn!");
+                                YourBalance.setText("$ " + YourBalanceValue);
+                                PoolBalance.setText("$ " + PoolBalanceValue);
+                                oppbal.setText("$ " + OppositeBalanceValue);
+                                labcurrval.setText("$ " + CurrentBitValue);
+
+                                String[] buttonOptions = { "Next Game", "Exit Game" };
+
+                                int userChoice = Utility.showGameResultDialog("You Won! Host Packed!", buttonOptions);
+
+                                // Handle the result
+                                if (userChoice == 0) {
+                                    System.out.println("Host clicked Next Game");
+
+                                    String allNewCards[] = Utility.getRandomCards(6);
+                                    allcards[0] = allNewCards[0];
+                                    allcards[1] = allNewCards[1];
+                                    allcards[2] = allNewCards[2];
+                                    allcards[3] = allNewCards[3];
+                                    allcards[4] = allNewCards[4];
+                                    allcards[5] = allNewCards[5];
+
+                                    System.out.println(
+                                            "New cards generated for the next game from Player:"
+                                                    + Arrays.toString(allcards));
+
+                                    MyCards[0] = allcards[3];
+                                    MyCards[1] = allcards[4];
+                                    MyCards[2] = allcards[5];
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen, "NEWGAME",
+                                            ""));
+                                    dout.flush();
+                                    System.out.println("🧵 THREAD UPDATING WINDOW! Memory ID: "
+                                            + PlayerGame.this.hashCode());
+                                    C1.setIcon(new ImageIcon("card_back.png"));
+                                    C2.setIcon(new ImageIcon("card_back.png"));
+                                    C3.setIcon(new ImageIcon("card_back.png"));
+                                    isVisibleCards = false;
+                                    isSeen = false;
+                                    TurnIndicator.setText("Host's Turn!");
+                                    btnbet.setVisible(false);
+                                    btnpack.setVisible(false);
+                                    btnshow.setVisible(false);
+                                    btnsee.setVisible(false);
+                                    IncrementBit.setVisible(false);
+                                    DecrementBit.setVisible(false);
+                                } else if (userChoice == 1) {
+                                    System.out.println("Host clicked Exit Game");
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen, "EXITGAME",
+                                            ""));
+                                    dout.flush();
+                                    setVisible(false);
+                                    return;
+                                } else {
+                                    System.out.println("Dialog was closed without a selection.");
+                                    setVisible(false);
+                                    return;
+                                }
+                                break;
+
+                            case "SHOW":
+                                System.out.println("Game Results from Host: " + result);
+
+                                // 1. Determine the outcome based on the starting words of the descriptive
+                                // string
+                                // (Remember: "result" now looks like "Host wins! Host's Pair... beats
+                                // Player's...")
+                                boolean isPlayerLoss = result.startsWith("Host wins");
+                                boolean isTie = result.startsWith("It's a Tie");
+
+                                // 2. Build the exact display message
+                                String messageToDisplay;
+
+                                if (isTie) {
+                                    messageToDisplay = "It's a Tie! " + result + "\n";
+                                } else if (isPlayerLoss) {
+                                    messageToDisplay = "You lost! " + result + "\n";
+                                } else {
+                                    // If it's not a tie and the host didn't win, the player won
+                                    messageToDisplay = "You won! " + result + "\n";
+                                }
+
+                                // 3. Update Balances based on the outcome (Player Perspective)
+                                if (isPlayerLoss) {
+                                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                                } else if (isTie) {
+                                    // In a tie, split the pool evenly
+                                    YourBalanceValue += PoolBalanceValue / 2;
+                                    OppositeBalanceValue += PoolBalanceValue / 2;
+                                } else {
+                                    // Player wins
+                                    YourBalanceValue += PoolBalanceValue; // Player takes the pool
+                                }
+
+                                // 4. Reset the game state for the next round (consolidated to keep code DRY)
+                                isSeen = false;
+                                hasOpponentSeen = false;
+                                PoolBalanceValue = 0;
+                                CurrentBitValue = 10;
+                                Increment = 0;
+
+                                TurnIndicator.setText("Your Turn!");
+                                YourBalance.setText("$ " + YourBalanceValue);
+                                PoolBalance.setText("$ " + PoolBalanceValue);
+                                oppbal.setText("$ " + OppositeBalanceValue);
+                                labcurrval.setText("$ " + CurrentBitValue);
+
+                                String[] buttonOptionsForShow = { "Next Game", "Exit Game" };
+
+                                int userChoiceForShow = Utility.showGameResultDialog(messageToDisplay,
+                                        buttonOptionsForShow);
+
+                                // Handle the result
+                                if (userChoiceForShow == 0) {
+                                    System.out.println("Host clicked Next Game");
+
+                                    String allNewCards[] = Utility.getRandomCards(6);
+                                    allcards[0] = allNewCards[0];
+                                    allcards[1] = allNewCards[1];
+                                    allcards[2] = allNewCards[2];
+                                    allcards[3] = allNewCards[3];
+                                    allcards[4] = allNewCards[4];
+                                    allcards[5] = allNewCards[5];
+
+                                    System.out.println(
+                                            "New cards generated for the next game from Player:"
+                                                    + Arrays.toString(allcards));
+
+                                    MyCards[0] = allcards[3];
+                                    MyCards[1] = allcards[4];
+                                    MyCards[2] = allcards[5];
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoiceForShow, isSeen,
+                                            "NEWGAME",
+                                            ""));
+                                    dout.flush();
+                                    System.out.println("🧵 THREAD UPDATING WINDOW! Memory ID: "
+                                            + PlayerGame.this.hashCode());
+                                    C1.setIcon(new ImageIcon("card_back.png"));
+                                    C2.setIcon(new ImageIcon("card_back.png"));
+                                    C3.setIcon(new ImageIcon("card_back.png"));
+                                    isVisibleCards = false;
+                                    isSeen = false;
+                                    TurnIndicator.setText("Host's Turn!");
+                                    btnbet.setVisible(false);
+                                    btnpack.setVisible(false);
+                                    btnshow.setVisible(false);
+                                    btnsee.setVisible(false);
+                                    IncrementBit.setVisible(false);
+                                    DecrementBit.setVisible(false);
+                                } else if (userChoiceForShow == 1) {
+                                    System.out.println("Host clicked Exit Game");
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards,
+                                            userChoiceForShow, isSeen, "EXITGAME",
+                                            ""));
+                                    dout.flush();
+                                    setVisible(false);
+                                    return;
+                                } else {
+                                    System.out.println("Dialog was closed without a selection.");
+                                    setVisible(false);
+                                    return;
+                                }
+                                break;
+                            case "NEXTGAME":
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ImageIcon backIcon = new ImageIcon("card_back.png");
+
+                                        C1.setIcon(backIcon);
+                                        C1.revalidate();
+                                        C1.repaint();
+
+                                        C2.setIcon(backIcon);
+                                        C2.revalidate();
+                                        C2.repaint();
+
+                                        C3.setIcon(backIcon);
+                                        C3.revalidate();
+                                        C3.repaint();
+
+                                        TurnIndicator.setText("Your Turn!");
+                                        YourBalance.setText("$ " + YourBalanceValue);
+                                        PoolBalance.setText("$ " + PoolBalanceValue);
+                                        oppbal.setText("$ " + OppositeBalanceValue);
+                                        labcurrval.setText("$ " + CurrentBitValue);
+
+                                        btnbet.setVisible(true);
+                                        btnpack.setVisible(true);
+                                        btnshow.setVisible(true);
+                                        btnsee.setVisible(true);
+                                        IncrementBit.setVisible(true);
+                                        DecrementBit.setVisible(true);
+
+                                        getContentPane().revalidate();
+                                        PlayerGame.this.repaint();
+                                    }
+                                });
+
+                                isVisibleCards = false;
+                                isSeen = false;
+                                System.out.println("INSIDE PLAYER NEW GAME");
+                                break;
+                            case "EXITGAME":
+                                System.out.println("Host clicked Exit Game");
+                                removeAllThreads();
+                                setVisible(false);
+                                return;
+                            default:
+                                break;
+                        }
+
+                        if (!action.equals("SHOW")) {
+                            TurnIndicator.setText("Your Turn!");
+                        }
+                        YourBalance.setText("$ " + YourBalanceValue);
+                        PoolBalance.setText("$ " + PoolBalanceValue);
+                        oppbal.setText("$ " + OppositeBalanceValue);
+                        labcurrval.setText("$ " + CurrentBitValue);
+                    } catch (Exception ex2) {
+                        // TODO: handle exception
+                        System.out.println("Error while reading from host: " + ex2.getMessage());
+                        setVisible(false);
+                        return;
+                    }
+                    if (CurrentBitValue > YourBalanceValue) {
+                        // Show Dialog and Tell Him to Pack THe Game
+                        JFrame f = new JFrame();
+                        JOptionPane.showMessageDialog(f, "Low Balance\nCurrent Bit Value:-" + CurrentBitValue
+                                + "\nYour Balance:-" + YourBalanceValue);
+                        try {
+                            dout.writeUTF("ilose");
+                        } catch (Exception e) {
+                            // TODO: handle exception
+                        }
+                        setVisible(false);
+                        return;
+                    }
+
+                    try {
+                        if (!action.equals("SHOW") && !action.equals("PACK")) {
+                            btnbet.setVisible(true);
+                            btnpack.setVisible(true);
+                            btnshow.setVisible(true);
+                            btnsee.setVisible(true);
+                            IncrementBit.setVisible(true);
+                            DecrementBit.setVisible(true);
+                            this.wait();
+                        }
+                    } catch (Exception ex8) {
+                        // TODO: handle exception
+                    }
+                }
+
+            }
+        });
+        th.start();
+        System.out.println("👀 VISIBLE WINDOW CREATED! Memory ID: " + this.hashCode());
+    }
+
+    private void btnshowActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+
+    private void btnpackActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+
+    private void IncrementBitActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+    }
+
+    private void DecrementBitActionPerformed(java.awt.event.ActionEvent evt) {
+        // TODO add your handling code here:
+
+    }
+}
+
+class card_game {
+
+    InputStreamReader x = new InputStreamReader(System.in);
+
+    int resuser_1, resuser_2, cc = 0;
+    String hands[] = { "High Card", "Pair", "Colour", "Sequence", "Coloured Sequence", "Trail" };
+    // static String
+    // card[]={"2H","3H","4H","5H","6H","7H","8H","9H","0H","JH","QH","KH","AH","2S","3S","4S","5S","6S","7S","8S","9S","0S","JS","QS","KS","AS","2C","3C","4C","5C","6C","7C","8C","9C","0C","JC","QC","KC","AC","2D","3D","4D","5D","6D","7D","8D","9D","0D","JD","QD","KD","AD"};
+    // static String
+    // card[]={"JH","QH","KH","AH","JS","QS","KS","AS","JC","QC","KC","AC","JD","QD","KD","AD"};
+    String win[] = { "", "", "" };
+
+    // public static void main(String[] args) {
+    // cc = 0;
+    // shuffle(card);
+    // resuser_1 = checkhnd(card[0], card[2], card[4]);
+    // resuser_2 = checkhnd(card[1], card[3], card[5]);
+    // result(resuser_1, resuser_2);
+
+    // for (int i = 0; i < 3; i++) {
+    // System.out.print(win[i] + " ");
+    // }
+
+    // }
+
+    String card[] = new String[6];
+
+    String[] GetResult(String ALLCARDS[]) {
+        card[0] = ALLCARDS[0];
+        card[2] = ALLCARDS[1];
+        card[4] = ALLCARDS[2];
+        card[1] = ALLCARDS[3];
+        card[3] = ALLCARDS[4];
+        card[5] = ALLCARDS[5];
+        resuser_1 = checkhnd(card[0], card[2], card[4]);
+        resuser_2 = checkhnd(card[1], card[3], card[5]);
+        result(resuser_1, resuser_2);
+        return win;
+    }
+
+    // public static void waitfr(int time) {
+    // try {
+    // Thread.sleep(time);
+    // } catch (Exception e) {
+    // }
+    // }
+
+    public int checkhnd(String crd1, String crd2, String crd3) {
+
+        int crd1num = 0, crd2num = 0, crd3num = 0;
+        char crd1baghdo = crd1.charAt(1), crd2baghdo = crd2.charAt(1), crd3baghdo = crd3.charAt(1);
+        int res = 0;
+        crd1num = assignvalue(crd1.charAt(0));
+        crd2num = assignvalue(crd2.charAt(0));
+        crd3num = assignvalue(crd3.charAt(0));
+
+        if (crd1.charAt(0) == '0') {
+            crd1num = 10;
+        }
+        if (crd2.charAt(0) == '0') {
+            crd2num = 10;
+        }
+        if (crd3.charAt(0) == '0') {
+            crd3num = 10;
+        }
+
+        int arr[] = { crd1num, crd2num, crd3num };
+        Arrays.sort(arr);
+        if (crd1num == crd2num && crd1num == crd3num)
+            res = 5;
+        else if (crd1baghdo == crd2baghdo && crd1baghdo == crd3baghdo) {
+            if (arr[0] + 1 == arr[1] && arr[1] + 1 == arr[2])
+                res = 4;
+            else
+                res = 2;
+        } else if (arr[0] + 1 == arr[1] && arr[1] + 1 == arr[2])
+            res = 3;
+        else if (crd1num == crd2num || crd2num == crd3num || crd3num == crd1num)
+            res = 1;
+        else
+            res = 0;
+        return res;
+    }
+
+    public int assignvalue(int val) {
+        int res = 0;
+        if (val == 65)
+            res = 14;
+        else if (val == 74)
+            res = 11;
+        else if (val == 75)
+            res = 13;
+        else if (val == 81)
+            res = 12;
+        else
+            res = val - 48;
+        return res;
+    }
+
+    public void result(int user_1, int user_2) {
+
+        if (user_1 > user_2) {
+            win[0] = "1";
+            win[1] = hands[user_1];
+        } else if (user_2 > user_1) {
+            win[0] = "2";
+            win[1] = hands[user_2];
+        } else {
+            if ((user_1 == 0 && user_2 == 0) || (user_1 == 2 && user_2 == 2) || (user_1 == 3 && user_2 == 3)
+                    || (user_1 == 4 && user_2 == 4) || (user_1 == 5 && user_2 == 5)) {
+
+                int[] num1 = findhigh(card[0], card[2], card[4]);
+                int[] num2 = findhigh(card[1], card[3], card[5]);
+
+                if (num1[0] > num2[0]) {
+                    if (user_1 == 3 && user_2 == 3) {
+                        win[0] = "1";
+                        win[1] = hands[user_1];
+                        win[2] = "+ high card";
+                    } else if (user_1 == 2 && user_2 == 2) {
+                        win[0] = "1";
+                        win[1] = hands[user_1];
+                        win[2] = "+ high card";
+                    } else
+                        win[0] = "1";
+                    win[1] = hands[user_1];
+                } else if (num2[0] > num1[0]) {
+                    if (user_1 == 3 && user_2 == 3) {
+                        win[0] = "2";
+                        win[1] = hands[user_2];
+                        win[2] = "+ high card";
+                    } else if (user_1 == 2 && user_2 == 2) {
+                        win[0] = "2";
+                        win[1] = hands[user_2];
+                        win[2] = "+ high card";
+                    } else {
+                        win[0] = "2";
+                        win[1] = hands[user_2];
+                    }
+                } else if (num1[0] == num2[0]) {
+                    if (num1[1] > num2[1]) {
+                        if (user_1 == 3 && user_2 == 3) {
+                            win[0] = "1";
+                            win[1] = hands[user_1];
+                            win[2] = "+ high card";
+                        } else if (user_1 == 2 && user_2 == 2) {
+                            win[0] = "1";
+                            win[1] = hands[user_1];
+                            win[2] = "+ high card";
+                        } else
+                            win[0] = "1";
+                        win[1] = hands[user_1];
+                    } else {
+
+                        if (user_1 == 3 && user_2 == 3) {
+                            win[0] = "2";
+                            win[1] = hands[user_2];
+                            win[2] = "+ high card";
+                        } else if (user_1 == 2 && user_2 == 2) {
+                            win[0] = "2";
+                            win[1] = hands[user_2];
+                            win[2] = "+ high card";
+                        } else
+                            win[0] = "2";
+                        win[1] = hands[user_2];
+                    }
+
+                } else {
+                    win[0] = "It's a tie....";
+                }
+            } else if (user_1 == 1 && user_2 == 1) {
+                int[] user_1crd1 = pairdis(card[0]);
+                int[] user_1crd2 = pairdis(card[2]);
+                int[] user_1crd3 = pairdis(card[4]);
+                int[] user_2crd1 = pairdis(card[1]);
+                int[] user_2crd2 = pairdis(card[3]);
+                int[] user_2crd3 = pairdis(card[5]);
+
+                // int user_1crd1=assignvalue(card[0].charAt(0));
+                // int user_1crd2=assignvalue(card[2].charAt(0));
+                // int user_1crd3=assignvalue(card[4].charAt(0));
+                // int user_2crd1=assignvalue(card[1].charAt(0));
+                // int user_2crd2=assignvalue(card[3].charAt(0));
+                // int user_2crd3=assignvalue(card[5].charAt(0));
+
+                int user_1c = 0, user_2c = 0;
+                if (user_1crd1[0] == user_1crd2[0] || user_1crd1[0] == user_1crd3[0])
+                    user_1c = user_1crd1[0];
+                else if (user_1crd2[0] == user_1crd3[0])
+                    user_1c = user_1crd3[0];
+                if (user_2crd1[0] == user_2crd2[0] || user_2crd1[0] == user_2crd3[0])
+                    user_2c = user_2crd1[0];
+                else if (user_2crd2[0] == user_2crd3[0])
+                    user_2c = user_2crd3[0];
+
+                if (user_1c > user_2c) {
+
+                    win[0] = "1";
+                    win[1] = hands[user_1];
+                    win[2] = "+ high card";
+                } else if (user_2c > user_1c) {
+                    win[0] = "2";
+                    win[1] = hands[user_2];
+                    win[2] = "+ high card";
+                } else {
+                    int[] player1 = new int[2];
+                    int[] player2 = new int[2];
+                    if (user_1crd1[0] == user_1crd2[0]) {
+                        player1[0] = user_1crd3[0];
+                        player1[1] = user_1crd3[1];
+                    } else if (user_1crd1[0] == user_1crd3[0]) {
+                        player1[0] = user_1crd2[0];
+                        player1[1] = user_1crd2[1];
+                    } else if (user_1crd2[0] == user_1crd3[0]) {
+                        player1[0] = user_1crd1[0];
+                        player1[1] = user_1crd1[1];
+                    }
+
+                    if (user_2crd1[0] == user_2crd2[0]) {
+                        player2[0] = user_2crd3[0];
+                        player2[1] = user_2crd3[1];
+                    } else if (user_2crd1[0] == user_2crd3[0]) {
+                        player2[0] = user_2crd2[0];
+                        player2[1] = user_2crd2[1];
+                    } else if (user_2crd2[0] == user_2crd3[0]) {
+                        player2[0] = user_2crd1[0];
+                        player2[1] = user_2crd1[1];
+                    }
+
+                    if (player1[0] > player2[0]) {
+                        win[0] = "1";
+                        win[1] = hands[user_1];
+                        win[2] = "+ high card";
+                    } else if (player1[0] < player2[0]) {
+                        win[0] = "2";
+                        win[1] = hands[user_2];
+                        win[2] = "+ high card";
+                    } else {
+                        if (player1[0] > player2[0]) {
+                            win[0] = "1";
+                            win[1] = hands[user_1];
+                            win[2] = "+ high card same but high card type";
+                        } else {
+                            win[0] = "2";
+                            win[1] = hands[user_2];
+                            win[2] = "+ high card same but high card type";
+                        }
+
+                    }
+
+                }
+            } else {
+                System.out.println("\nIt's a tie...");
+            }
+
+        }
+    }
+
+    public int[] findhigh(String crd1, String crd2, String crd3) {
+        int[] val = new int[2];
+
+        int crd1_type = assignvalue(crd1.charAt(1));
+        int crd2_type = assignvalue(crd2.charAt(1));
+        int crd3_type = assignvalue(crd3.charAt(1));
+
+        int crd1num = assignvalue(crd1.charAt(0));
+        int crd2num = assignvalue(crd2.charAt(0));
+        int crd3num = assignvalue(crd3.charAt(0));
+
+        if (crd1.charAt(0) == '0') {
+            crd1num = 10;
+        }
+        if (crd2.charAt(0) == '0') {
+            crd2num = 10;
+
+        }
+        if (crd3.charAt(0) == '0') {
+            crd3num = 10;
+        }
+
+        if (crd1_type == 20) {
+            crd1_type -= 2;
+        }
+        if (crd2_type == 20) {
+            crd2_type -= 2;
+        }
+        if (crd3_type == 20) {
+            crd3_type -= 2;
+        }
+
+        if (crd1num > crd2num && crd1num > crd3num) {
+            val[0] = crd1num;
+            val[1] = crd1_type;
+        } else if (crd2num > crd3num) {
+            val[0] = crd2num;
+            val[1] = crd2_type;
+        } else {
+            val[0] = crd3num;
+            val[1] = crd3_type;
+        }
+        return val;
+    }
+
+    public int[] pairdis(String crd) {
+        int[] val = new int[2];
+        if (crd.charAt(0) == '0') {
+            val[0] = 10;
+            val[1] = assignvalue(crd.charAt(1));
+            if (val[1] == 20) {
+                val[1] -= 2;
+            }
+        } else {
+            val[0] = assignvalue(crd.charAt(0));
+            val[1] = assignvalue(crd.charAt(1));
+            if (val[1] == 20) {
+                val[1] -= 2;
+            }
+        }
+        return val;
+    }
+
+}
+
+class Utility {
+    static String card[] = { "2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "0H", "JH", "QH", "KH", "AH", "2S", "3S",
+            "4S",
+            "5S", "6S", "7S", "8S", "9S", "0S", "JS", "QS", "KS", "AS", "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C",
+            "0C", "JC", "QC", "KC", "AC", "2D", "3D", "4D", "5D", "6D", "7D", "8D", "9D", "0D", "JD", "QD", "KD",
+            "AD" };
+
+    public static String[] getRandomCards(int n) {
+        if (n < 0 || n > card.length) {
+            throw new IllegalArgumentException("Requested number of cards must be between 0 and " + card.length);
+        }
+        List<String> deckList = new ArrayList<>(Arrays.asList(card));
+        Collections.shuffle(deckList);
+        String[] drawnCards = new String[n];
+        for (int i = 0; i < n; i++)
+            drawnCards[i] = deckList.get(i);
+        return drawnCards;
+    }
+
+    // 1. Convert all parameters (plus action and result) into a single formatted
+    // string
+    public static String packData(
+            int YourBalanceValue, int PoolBalanceValue, int OppositeBalanceValue, int CurrentBitValue,
+            int Increment, boolean BtnVisible, String[] ALLCARDS, String[] MyCards,
+            boolean isVisibleCards, int k, boolean isSeen,
+            String action, String result) { // <-- Added parameters
+
+        // Handle null values cleanly so they don't break the string layout
+        String allCardsStr = (ALLCARDS != null) ? String.join("-", ALLCARDS) : "null";
+        String myCardsStr = (MyCards != null) ? String.join("-", MyCards) : "null";
+        String actionStr = (action != null && !action.isEmpty()) ? action : "none";
+        String resultStr = (result != null && !result.isEmpty()) ? result : "none";
+
+        // Build one single line string separated by commas
+        return YourBalanceValue + ","
+                + PoolBalanceValue + ","
+                + OppositeBalanceValue + ","
+                + CurrentBitValue + ","
+                + Increment + ","
+                + BtnVisible + ","
+                + allCardsStr + ","
+                + myCardsStr + ","
+                + isVisibleCards + ","
+                + k + ","
+                + isSeen + ","
+                + actionStr + "," // Index 11
+                + resultStr; // Index 12
+    }
+
+    /**
+     * 2. Takes the raw string and explicitly modifies all passed parameters,
+     * including the new action and result array references.
+     */
+    public static void unpackAndSetBoardData(
+            String receivedString,
+            int[] YourBalanceValue, int[] PoolBalanceValue, int[] OppositeBalanceValue, int[] CurrentBitValue,
+            int[] Increment, boolean[] BtnVisible, String[][] ALLCARDS, String[][] MyCards,
+            boolean[] isVisibleCards, int[] k, boolean[] isSeen,
+            String[] action, String[] result) { // <-- Added wrapper parameters
+        try {
+            String[] data = receivedString.split(",");
+
+            // Modify the underlying single-element wrappers directly
+            YourBalanceValue[0] = Integer.parseInt(data[0]);
+            PoolBalanceValue[0] = Integer.parseInt(data[1]);
+            OppositeBalanceValue[0] = Integer.parseInt(data[2]);
+            CurrentBitValue[0] = Integer.parseInt(data[3]);
+            Increment[0] = Integer.parseInt(data[4]);
+            BtnVisible[0] = Boolean.parseBoolean(data[5]);
+
+            ALLCARDS[0] = data[6].split("-");
+            MyCards[0] = data[7].split("-");
+
+            isVisibleCards[0] = Boolean.parseBoolean(data[8]);
+            k[0] = Integer.parseInt(data[9]);
+            isSeen[0] = Boolean.parseBoolean(data[10]);
+
+            // Unpack the new elements safely into index 0
+            action[0] = data[11];
+            result[0] = data[12];
+
+        } catch (Exception e) {
+            System.out.println("Error mapping network data parameters: " + e.getMessage());
+        }
+    }
+
+    public static String[] unpackData(String receivedString) {
+        if (receivedString == null || receivedString.isEmpty()) {
+            return new String[0];
+        }
+        // Simply splits the string by commas
+        return receivedString.split(",");
+    }
+
+    public static int showGameResultDialog(String messageToDisplay, String[] options) {
+        System.out.println("Showing results dialog...");
+        int choice = JOptionPane.CLOSED_OPTION; // Defaults to -1 if something goes wrong or it's closed
+
+        try {
+            // You can pass null instead of a new JFrame if you want it centered on the
+            // screen
+            JFrame resultsShowingDialog = new JFrame();
+
+            choice = JOptionPane.showOptionDialog(
+                    resultsShowingDialog, // Parent frame
+                    messageToDisplay, // Message to display
+                    "Game Result", // Title of the dialog
+                    JOptionPane.DEFAULT_OPTION, // Default option behavior
+                    JOptionPane.INFORMATION_MESSAGE, // Message type
+                    null, // No custom icon
+                    options, // Button labels
+                    options.length > 0 ? options[0] : null // Safely set the default button
+            );
+        } catch (Exception e) {
+            System.out.println("Error showing dialog: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return choice;
+    }
+
+    // Result Functions
+    public static String compareHands(String[] hostCards, String[] playerCards) {
+        HandDetails hostHand = evaluateHand(hostCards);
+        HandDetails playerHand = evaluateHand(playerCards);
+
+        int winner = 0; // 0 = Tie, 1 = Host, 2 = Player
+
+        // 1. Compare by Hand Category (Trail > Coloured Sequence > Sequence > Colour >
+        // Pair > High Card)
+        if (hostHand.category > playerHand.category) {
+            winner = 1;
+        } else if (playerHand.category > hostHand.category) {
+            winner = 2;
+        } else {
+            // 2. If categories are the same, compare tie-breaker values sequentially
+            for (int i = 0; i < hostHand.tieBreakers.length; i++) {
+                if (hostHand.tieBreakers[i] > playerHand.tieBreakers[i]) {
+                    winner = 1;
+                    break;
+                } else if (playerHand.tieBreakers[i] > hostHand.tieBreakers[i]) {
+                    winner = 2;
+                    break;
+                }
+            }
+        }
+
+        // 3. Format the result string
+        String hostCardsStr = String.join(", ", hostCards);
+        String playerCardsStr = String.join(", ", playerCards);
+
+        if (winner == 1) {
+            return String.format("Host wins! Host's %s (%s) beats Player's %s (%s).",
+                    hostHand.handName, hostCardsStr, playerHand.handName, playerCardsStr);
+        } else if (winner == 2) {
+            return String.format("Player wins! Player's %s (%s) beats Host's %s (%s).",
+                    playerHand.handName, playerCardsStr, hostHand.handName, hostCardsStr);
+        } else {
+            return String.format("It's a Tie! Both players hold exactly equal %s. (Host: %s | Player: %s).",
+                    hostHand.handName, hostCardsStr, playerCardsStr);
+        }
+    }
+
+    private static class HandDetails {
+        int category; // 0 to 5 (Higher is better)
+        int[] tieBreakers; // Array of card values to break ties (e.g., High Pair value, then Kicker)
+        String handName; // Human readable string (e.g., "Pair", "Trail")
+    }
+
+    private static HandDetails evaluateHand(String[] cards) {
+        int[] ranks = new int[3];
+        char[] suits = new char[3];
+
+        for (int i = 0; i < 3; i++) {
+            ranks[i] = getCardValue(cards[i].charAt(0));
+            suits[i] = cards[i].charAt(1);
+        }
+
+        // Sort ranks ascending, then reverse to descending order for easier comparison
+        Arrays.sort(ranks);
+        int[] descRanks = new int[] { ranks[2], ranks[1], ranks[0] };
+
+        boolean isFlush = (suits[0] == suits[1] && suits[1] == suits[2]);
+        // Note: This checks for standard mathematical sequences (e.g. 10, J, Q).
+        boolean isSequence = (descRanks[0] == descRanks[1] + 1 && descRanks[1] == descRanks[2] + 1);
+
+        HandDetails details = new HandDetails();
+
+        if (descRanks[0] == descRanks[1] && descRanks[1] == descRanks[2]) {
+            details.category = 5;
+            details.handName = "Trail (Three of a Kind)";
+            details.tieBreakers = new int[] { descRanks[0] }; // Only need one value for Trail
+        } else if (isSequence && isFlush) {
+            details.category = 4;
+            details.handName = "Coloured Sequence (Straight Flush)";
+            details.tieBreakers = descRanks;
+        } else if (isSequence) {
+            details.category = 3;
+            details.handName = "Sequence (Straight)";
+            details.tieBreakers = descRanks;
+        } else if (isFlush) {
+            details.category = 2;
+            details.handName = "Colour (Flush)";
+            details.tieBreakers = descRanks;
+        } else if (descRanks[0] == descRanks[1]) {
+            details.category = 1;
+            details.handName = "Pair";
+            // Important for ties: compare the paired card first, THEN the unmatched card
+            // (kicker)
+            details.tieBreakers = new int[] { descRanks[0], descRanks[2] };
+        } else if (descRanks[1] == descRanks[2]) {
+            details.category = 1;
+            details.handName = "Pair";
+            // The pair is the lower two cards; kicker is the highest card
+            details.tieBreakers = new int[] { descRanks[1], descRanks[0] };
+        } else {
+            details.category = 0;
+            details.handName = "High Card";
+            details.tieBreakers = descRanks; // Compare highest, then middle, then lowest
+        }
+
+        return details;
+    }
+
+    private static int getCardValue(char rankChar) {
+        if (rankChar == '0')
+            return 10;
+        if (rankChar == 'J')
+            return 11;
+        if (rankChar == 'Q')
+            return 12;
+        if (rankChar == 'K')
+            return 13;
+        if (rankChar == 'A')
+            return 14;
+        return rankChar - '0'; // Converts '2'-'9' to integer 2-9
+    }
+
+}
