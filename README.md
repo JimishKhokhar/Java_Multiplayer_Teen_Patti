@@ -39,6 +39,9 @@ flowchart LR
     C -->|while true: loop back to next read| C
 ```
 
+![Button to Thread Action Flow](https://raw.githubusercontent.com/JimishKhokhar/Java_Multiplayer_Teen_Patti/b41e5c5cc0b082dfe36af52c67ca649e7fdcba52/button_to_thread_action_flow.png)
+
+
 ## Sending a move (button click, e.g. BET)
 
 ```java
