@@ -646,17 +646,54 @@ class HostGame extends javax.swing.JFrame {
         btnpack.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 try {
-                    // dout.writeUTF("ipack");
+                    String[] buttonOptions = { "Yes", "No" };
+
+                    int userChoiceForPack = Utility.showGameResultDialog("Are you sure you want to pack?",
+                            buttonOptions);
+
+                    if (userChoiceForPack != 0) {
+                        return; // User chose "No" or closed the dialog
+                    }
+
                     dout.writeUTF(
                             Utility.packData(YourBalanceValue, PoolBalanceValue, OppositeBalanceValue, CurrentBitValue,
                                     Increment, false, allcards, allcards, isVisibleCards, 0, isSeen, "PACK", ""));
 
+                    C1.setIcon(new ImageIcon("card_back.png"));
+                    C2.setIcon(new ImageIcon("card_back.png"));
+                    C3.setIcon(new ImageIcon("card_back.png"));
+                    isVisibleCards = false;
+                    isSeen = false;
+
+                    // 5. Reset the game state for the next round (done once for all outcomes)
+                    isSeen = false;
+                    hasOpponentSeen = false;
+                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                    PoolBalanceValue = 0;
+                    CurrentBitValue = 10;
+                    Increment = 0;
+
+                    TurnIndicator.setText("PLAYER WILL START");
+                    YourBalance.setText("$ " + YourBalanceValue);
+                    PoolBalance.setText("$ " + PoolBalanceValue);
+                    oppbal.setText("$ " + OppositeBalanceValue);
+                    labcurrval.setText("$ " + CurrentBitValue);
+
+                    btnbet.setVisible(false);
+                    btnpack.setVisible(false);
+                    btnshow.setVisible(false);
+                    btnsee.setVisible(false);
+                    IncrementBit.setVisible(false);
+                    DecrementBit.setVisible(false);
+                    try {
+                        th.notify();
+                    } catch (Exception ex5) {
+                        // TODO: handle exception
+                    }
+
                 } catch (Exception ex6) {
                     // TODO: handle exception
                 }
-                setVisible(false);
-
-                return;
             }
         });
 
@@ -700,7 +737,7 @@ class HostGame extends javax.swing.JFrame {
 
                 // 4. Build the display message (matchResult already explains exactly who had
                 // what cards!)
-                String messageToDisplay = "Host\n" + matchResult + "\n\nPlayer will Start New Game!";
+                String messageToDisplay =  matchResult + "\n\nPlayer will Start New Game!";
 
                 // 5. Update Balances based on the outcome
                 if (isHostLoss) {
@@ -818,15 +855,89 @@ class HostGame extends javax.swing.JFrame {
                                 System.out.println("Player BET");
                                 break;
                             case "PACK":
-                                JFrame f = new JFrame();
-                                JOptionPane.showMessageDialog(f, "You Win!\nHost PACKED!");
-                                setVisible(false);
-                                return;
+                                YourBalanceValue += PoolBalanceValue;
+                                isSeen = false;
+                                hasOpponentSeen = false;
+                                PoolBalanceValue = 0;
+                                CurrentBitValue = 10;
+                                Increment = 0;
+
+                                TurnIndicator.setText("Your Turn!");
+                                YourBalance.setText("$ " + YourBalanceValue);
+                                PoolBalance.setText("$ " + PoolBalanceValue);
+                                oppbal.setText("$ " + OppositeBalanceValue);
+                                labcurrval.setText("$ " + CurrentBitValue);
+
+                                String[] buttonOptions = { "Next Game", "Exit Game" };
+
+                                int userChoice = Utility.showGameResultDialog("You Won! Host Packed!", buttonOptions);
+
+                                // Handle the result
+                                if (userChoice == 0) {
+                                    System.out.println("Host clicked Next Game");
+
+                                    String allNewCards[] = Utility.getRandomCards(6);
+                                    allcards[0] = allNewCards[0];
+                                    allcards[1] = allNewCards[1];
+                                    allcards[2] = allNewCards[2];
+                                    allcards[3] = allNewCards[3];
+                                    allcards[4] = allNewCards[4];
+                                    allcards[5] = allNewCards[5];
+
+                                    System.out.println(
+                                            "New cards generated for the next game from Player:"
+                                                    + Arrays.toString(allcards));
+
+                                    MyCards[0] = allcards[3];
+                                    MyCards[1] = allcards[4];
+                                    MyCards[2] = allcards[5];
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen, "NEWGAME",
+                                            ""));
+                                    dout.flush();
+                                    C1.setIcon(new ImageIcon("card_back.png"));
+                                    C2.setIcon(new ImageIcon("card_back.png"));
+                                    C3.setIcon(new ImageIcon("card_back.png"));
+                                    isVisibleCards = false;
+                                    isSeen = false;
+                                    TurnIndicator.setText("Player's Turn!");
+                                    btnbet.setVisible(false);
+                                    btnpack.setVisible(false);
+                                    btnshow.setVisible(false);
+                                    btnsee.setVisible(false);
+                                    IncrementBit.setVisible(false);
+                                    DecrementBit.setVisible(false);
+                                } else if (userChoice == 1) {
+                                    System.out.println("Host clicked Exit Game");
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen, "EXITGAME",
+                                            ""));
+                                    dout.flush();
+                                    setVisible(false);
+                                    return;
+                                } else {
+                                    System.out.println("Dialog was closed without a selection.");
+                                    setVisible(false);
+                                    return;
+                                }
+                                break;
                             case "SHOW":
                                 System.out.println("Player has SHOWED!");
                                 boolean isHostWin = result.startsWith("Host wins");
                                 boolean isTie = result.startsWith("It's a Tie");
-                                String messageToDisplay = "Host\n" + result + "\n";
+
+                                // 1. Build the personalized display message for the Host
+                                String messageToDisplay;
+                                if (isTie) {
+                                    messageToDisplay = "It's a Tie! " + result + "\n";
+                                } else if (isHostWin) {
+                                    messageToDisplay = "You won! " + result + "\n";
+                                } else {
+                                    // If it's not a tie and the host didn't win, the host lost
+                                    messageToDisplay = "You lost! " + result + "\n";
+                                }
                                 if (isHostWin) {
                                     YourBalanceValue += PoolBalanceValue; // Host takes the pool
                                 } else if (isTie) {
@@ -843,11 +954,12 @@ class HostGame extends javax.swing.JFrame {
                                 Increment = 0;
 
                                 try {
-                                    String[] buttonOptions = { "Next Game", "Exit Game" };
+                                    String[] buttonOptionsForShow = { "Next Game", "Exit Game" };
 
-                                    int userChoice = Utility.showGameResultDialog(messageToDisplay, buttonOptions);
+                                    int userChoiceForShow = Utility.showGameResultDialog(messageToDisplay,
+                                            buttonOptionsForShow);
 
-                                    if (userChoice == 0) {
+                                    if (userChoiceForShow == 0) {
                                         System.out.println("Host clicked Next Game");
 
                                         String allNewCards[] = Utility.getRandomCards(6);
@@ -868,7 +980,8 @@ class HostGame extends javax.swing.JFrame {
 
                                         dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
                                                 OppositeBalanceValue, CurrentBitValue, 0,
-                                                isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen,
+                                                isSeen, allcards, allcards, isVisibleCards,
+                                                userChoiceForShow, isSeen,
                                                 "NEWGAME",
                                                 ""));
                                         dout.flush();
@@ -885,11 +998,11 @@ class HostGame extends javax.swing.JFrame {
                                         btnsee.setVisible(false);
                                         IncrementBit.setVisible(false);
                                         DecrementBit.setVisible(false);
-                                    } else if (userChoice == 1) {
+                                    } else if (userChoiceForShow == 1) {
                                         System.out.println("Host clicked Exit Game");
                                         dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
                                                 OppositeBalanceValue, CurrentBitValue, 0,
-                                                isSeen, allcards, allcards, isVisibleCards, userChoice, isSeen,
+                                                isSeen, allcards, allcards, isVisibleCards, userChoiceForShow, isSeen,
                                                 "EXITGAME",
                                                 ""));
                                         dout.flush();
@@ -951,6 +1064,11 @@ class HostGame extends javax.swing.JFrame {
                                 isSeen = false;
                                 System.out.println("INSIDE HOST NEW GAME ");
                                 break;
+                            case "EXITGAME":
+                                System.out.println("Host clicked Exit Game");
+                                removeAllThreadsFromHost();
+                                setVisible(false);
+                                return;
                             default:
                                 // Handle unknown action
                                 break;
@@ -983,7 +1101,7 @@ class HostGame extends javax.swing.JFrame {
                     }
 
                     try {
-                        if (!action.equals("SHOW")) {
+                        if (!action.equals("SHOW") && !action.equals("PACK")) {
                             btnbet.setVisible(true);
                             btnpack.setVisible(true);
                             btnshow.setVisible(true);
@@ -1341,15 +1459,54 @@ class PlayerGame extends javax.swing.JFrame {
         btnpack.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 try {
+                    String[] buttonOptions = { "Yes", "No" };
+
+                    int userChoiceForPack = Utility.showGameResultDialog("Are you sure you want to pack?",
+                            buttonOptions);
+
+                    if (userChoiceForPack != 0) {
+                        return; // User chose "No" or closed the dialog
+                    }
+
                     dout.writeUTF(
                             Utility.packData(YourBalanceValue, PoolBalanceValue, OppositeBalanceValue, CurrentBitValue,
                                     Increment, false, allcards, allcards, isVisibleCards, 0, isSeen, "PACK", ""));
 
+                    C1.setIcon(new ImageIcon("card_back.png"));
+                    C2.setIcon(new ImageIcon("card_back.png"));
+                    C3.setIcon(new ImageIcon("card_back.png"));
+                    isVisibleCards = false;
+                    isSeen = false;
+
+                    // 5. Reset the game state for the next round (done once for all outcomes)
+                    isSeen = false;
+                    hasOpponentSeen = false;
+                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                    PoolBalanceValue = 0;
+                    CurrentBitValue = 10;
+                    Increment = 0;
+
+                    TurnIndicator.setText("HOST WILL START");
+                    YourBalance.setText("$ " + YourBalanceValue);
+                    PoolBalance.setText("$ " + PoolBalanceValue);
+                    oppbal.setText("$ " + OppositeBalanceValue);
+                    labcurrval.setText("$ " + CurrentBitValue);
+
+                    btnbet.setVisible(false);
+                    btnpack.setVisible(false);
+                    btnshow.setVisible(false);
+                    btnsee.setVisible(false);
+                    IncrementBit.setVisible(false);
+                    DecrementBit.setVisible(false);
+                    try {
+                        th.notify();
+                    } catch (Exception ex5) {
+                        // TODO: handle exception
+                    }
+
                 } catch (Exception ex6) {
                     // TODO: handle exception
                 }
-                setVisible(false);
-                return;
             }
         });
 
@@ -1389,12 +1546,22 @@ class PlayerGame extends javax.swing.JFrame {
                     System.out.println("Error sending SHOW payload: " + x7.getMessage());
                 }
 
-                // 3. Determine the outcome based on the descriptive string
                 boolean isLoss = matchResult.startsWith("Host wins");
                 boolean isTie = matchResult.startsWith("It's a Tie");
 
-                // The matchResult string already contains the exact cards and reason!
-                String messageToDisplay = "Player\n" + matchResult + "\n\nHost will Start New Game!";
+                // 4. Determine the personalized outcome message
+                String customOutcome;
+                if (isTie) {
+                    customOutcome = "It's a Tie!";
+                } else if (isLoss) {
+                    customOutcome = "You lost!";
+                } else {
+                    customOutcome = "You won!";
+                }
+
+                // 5. Build the exact display message with header, outcome, context, and footer
+                String messageToDisplay = customOutcome + " (" + matchResult
+                        + ")\n\nHost will Start New Game!";
 
                 // 4. Update Balances based on the outcome
                 if (isLoss) {
@@ -1492,37 +1659,7 @@ class PlayerGame extends javax.swing.JFrame {
                                 // System.out.println("Host has BET!");
                                 break;
                             case "PACK":
-                                JFrame f = new JFrame();
-                                JOptionPane.showMessageDialog(f, "You Win!\nHost PACKED!");
-                                setVisible(false);
-                                return;
-                            case "SHOW":
-                                System.out.println("JIMISH!");
-                                System.out.println("Game Results from Host: " + result);
-
-                                // 1. Determine the outcome based on the starting words of the descriptive
-                                // string
-                                // (Remember: "result" now looks like "Host wins! Host's Pair... beats
-                                // Player's...")
-                                boolean isPlayerLoss = result.startsWith("Host wins");
-                                boolean isTie = result.startsWith("It's a Tie");
-
-                                // 2. Build the exact display message
-                                String messageToDisplay = "Player\n" + result + "\n";
-
-                                // 3. Update Balances based on the outcome (Player Perspective)
-                                if (isPlayerLoss) {
-                                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
-                                } else if (isTie) {
-                                    // In a tie, split the pool evenly
-                                    YourBalanceValue += PoolBalanceValue / 2;
-                                    OppositeBalanceValue += PoolBalanceValue / 2;
-                                } else {
-                                    // Player wins
-                                    YourBalanceValue += PoolBalanceValue; // Player takes the pool
-                                }
-
-                                // 4. Reset the game state for the next round (consolidated to keep code DRY)
+                                YourBalanceValue += PoolBalanceValue;
                                 isSeen = false;
                                 hasOpponentSeen = false;
                                 PoolBalanceValue = 0;
@@ -1537,7 +1674,7 @@ class PlayerGame extends javax.swing.JFrame {
 
                                 String[] buttonOptions = { "Next Game", "Exit Game" };
 
-                                int userChoice = Utility.showGameResultDialog(messageToDisplay, buttonOptions);
+                                int userChoice = Utility.showGameResultDialog("You Won! Host Packed!", buttonOptions);
 
                                 // Handle the result
                                 if (userChoice == 0) {
@@ -1592,6 +1729,114 @@ class PlayerGame extends javax.swing.JFrame {
                                     return;
                                 }
                                 break;
+
+                            case "SHOW":
+                                System.out.println("Game Results from Host: " + result);
+
+                                // 1. Determine the outcome based on the starting words of the descriptive
+                                // string
+                                // (Remember: "result" now looks like "Host wins! Host's Pair... beats
+                                // Player's...")
+                                boolean isPlayerLoss = result.startsWith("Host wins");
+                                boolean isTie = result.startsWith("It's a Tie");
+
+                                // 2. Build the exact display message
+                                String messageToDisplay;
+
+                                if (isTie) {
+                                    messageToDisplay = "It's a Tie! " + result + "\n";
+                                } else if (isPlayerLoss) {
+                                    messageToDisplay = "You lost! " + result + "\n";
+                                } else {
+                                    // If it's not a tie and the host didn't win, the player won
+                                    messageToDisplay = "You won! " + result + "\n";
+                                }
+
+                                // 3. Update Balances based on the outcome (Player Perspective)
+                                if (isPlayerLoss) {
+                                    OppositeBalanceValue += PoolBalanceValue; // Host takes the pool
+                                } else if (isTie) {
+                                    // In a tie, split the pool evenly
+                                    YourBalanceValue += PoolBalanceValue / 2;
+                                    OppositeBalanceValue += PoolBalanceValue / 2;
+                                } else {
+                                    // Player wins
+                                    YourBalanceValue += PoolBalanceValue; // Player takes the pool
+                                }
+
+                                // 4. Reset the game state for the next round (consolidated to keep code DRY)
+                                isSeen = false;
+                                hasOpponentSeen = false;
+                                PoolBalanceValue = 0;
+                                CurrentBitValue = 10;
+                                Increment = 0;
+
+                                TurnIndicator.setText("Your Turn!");
+                                YourBalance.setText("$ " + YourBalanceValue);
+                                PoolBalance.setText("$ " + PoolBalanceValue);
+                                oppbal.setText("$ " + OppositeBalanceValue);
+                                labcurrval.setText("$ " + CurrentBitValue);
+
+                                String[] buttonOptionsForShow = { "Next Game", "Exit Game" };
+
+                                int userChoiceForShow = Utility.showGameResultDialog(messageToDisplay,
+                                        buttonOptionsForShow);
+
+                                // Handle the result
+                                if (userChoiceForShow == 0) {
+                                    System.out.println("Host clicked Next Game");
+
+                                    String allNewCards[] = Utility.getRandomCards(6);
+                                    allcards[0] = allNewCards[0];
+                                    allcards[1] = allNewCards[1];
+                                    allcards[2] = allNewCards[2];
+                                    allcards[3] = allNewCards[3];
+                                    allcards[4] = allNewCards[4];
+                                    allcards[5] = allNewCards[5];
+
+                                    System.out.println(
+                                            "New cards generated for the next game from Player:"
+                                                    + Arrays.toString(allcards));
+
+                                    MyCards[0] = allcards[3];
+                                    MyCards[1] = allcards[4];
+                                    MyCards[2] = allcards[5];
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards, userChoiceForShow, isSeen,
+                                            "NEWGAME",
+                                            ""));
+                                    dout.flush();
+                                    System.out.println("🧵 THREAD UPDATING WINDOW! Memory ID: "
+                                            + PlayerGame.this.hashCode());
+                                    C1.setIcon(new ImageIcon("card_back.png"));
+                                    C2.setIcon(new ImageIcon("card_back.png"));
+                                    C3.setIcon(new ImageIcon("card_back.png"));
+                                    isVisibleCards = false;
+                                    isSeen = false;
+                                    TurnIndicator.setText("Host's Turn!");
+                                    btnbet.setVisible(false);
+                                    btnpack.setVisible(false);
+                                    btnshow.setVisible(false);
+                                    btnsee.setVisible(false);
+                                    IncrementBit.setVisible(false);
+                                    DecrementBit.setVisible(false);
+                                } else if (userChoiceForShow == 1) {
+                                    System.out.println("Host clicked Exit Game");
+                                    dout.writeUTF(Utility.packData(YourBalanceValue, PoolBalanceValue,
+                                            OppositeBalanceValue, CurrentBitValue, 0,
+                                            isSeen, allcards, allcards, isVisibleCards,
+                                            userChoiceForShow, isSeen, "EXITGAME",
+                                            ""));
+                                    dout.flush();
+                                    setVisible(false);
+                                    return;
+                                } else {
+                                    System.out.println("Dialog was closed without a selection.");
+                                    setVisible(false);
+                                    return;
+                                }
+                                break;
                             case "NEXTGAME":
                                 SwingUtilities.invokeLater(new Runnable() {
                                     @Override
@@ -1632,6 +1877,11 @@ class PlayerGame extends javax.swing.JFrame {
                                 isSeen = false;
                                 System.out.println("INSIDE PLAYER NEW GAME");
                                 break;
+                            case "EXITGAME":
+                                System.out.println("Host clicked Exit Game");
+                                removeAllThreads();
+                                setVisible(false);
+                                return;
                             default:
                                 break;
                         }
@@ -1664,7 +1914,7 @@ class PlayerGame extends javax.swing.JFrame {
                     }
 
                     try {
-                        if (!action.equals("SHOW")) {
+                        if (!action.equals("SHOW") && !action.equals("PACK")) {
                             btnbet.setVisible(true);
                             btnpack.setVisible(true);
                             btnshow.setVisible(true);
