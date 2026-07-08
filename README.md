@@ -99,3 +99,8 @@ th.start();
 | `HostGame` / `PlayerGame` | Game window + listener thread for each side |
 | `Utility` | Pack/unpack network payloads, hand comparison, dialogs |
 | `card_game` | Legacy hand-ranking helper (console-based) |
+
+| Host Interface | Player Interface |
+| :---: | :---: |
+| <img src="https://iili.io/ClSTSKx.png" alt="Host View" width="400"/> | <img src="http://iili.io/ClSTUcQ.png" alt="Player View" width="400"/> |
+
